@@ -1,12 +1,17 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { env, requireStudioAuth } from "../env.js";
+import { env, requireStudioAuth, resolveProjectId } from "../env.js";
 import { PlasmicStudioClient } from "../clients/studio.js";
 
-function makeClient() {
+const projectIdParam = z
+  .string()
+  .optional()
+  .describe("Plasmic project ID. Overrides PLASMIC_PROJECT_ID env var — use this to target a different project.");
+
+function makeClient(projectId?: string) {
   requireStudioAuth();
   return new PlasmicStudioClient(
-    env.projectId!,
+    resolveProjectId(projectId),
     env.apiUser!,
     env.apiToken!,
     env.studioHost
@@ -16,10 +21,10 @@ function makeClient() {
 export function registerCanvasTools(server: McpServer) {
   server.tool(
     "list_pages",
-    "List all pages in the Plasmic project",
-    {},
-    async () => {
-      const client = makeClient();
+    "List all pages in a Plasmic project",
+    { projectId: projectIdParam },
+    async ({ projectId }) => {
+      const client = makeClient(projectId);
       const components = await client.listComponents();
       const pages = components.filter((c) => c.isPage);
       return {
@@ -39,12 +44,13 @@ export function registerCanvasTools(server: McpServer) {
 
   server.tool(
     "list_components",
-    "List all components in the Plasmic project (including pages)",
+    "List all components in a Plasmic project (including pages)",
     {
+      projectId: projectIdParam,
       includePages: z.boolean().optional().describe("Include page components (default: true)"),
     },
-    async ({ includePages = true }) => {
-      const client = makeClient();
+    async ({ projectId, includePages = true }) => {
+      const client = makeClient(projectId);
       const components = await client.listComponents();
       const filtered = includePages ? components : components.filter((c) => !c.isPage);
       return {
@@ -69,10 +75,10 @@ export function registerCanvasTools(server: McpServer) {
 
   server.tool(
     "get_project_info",
-    "Get metadata for the Plasmic project (name, id, branches)",
-    {},
-    async () => {
-      const client = makeClient();
+    "Get metadata for a Plasmic project (name, id, branches)",
+    { projectId: projectIdParam },
+    async ({ projectId }) => {
+      const client = makeClient(projectId);
       const project = await client.getProject();
       return {
         content: [
@@ -89,10 +95,11 @@ export function registerCanvasTools(server: McpServer) {
     "get_project_bundle",
     "Get the full Plasmic project bundle (component tree data, element hierarchy). Warning: response can be large.",
     {
+      projectId: projectIdParam,
       branchId: z.string().optional().describe("Branch ID to fetch (default: main)"),
     },
-    async ({ branchId = "main" }) => {
-      const client = makeClient();
+    async ({ projectId, branchId = "main" }) => {
+      const client = makeClient(projectId);
       const bundle = await client.getProjectBundle(branchId);
       return {
         content: [
@@ -107,8 +114,9 @@ export function registerCanvasTools(server: McpServer) {
 
   server.tool(
     "create_component",
-    "Create a new page or sub-component in the Plasmic project",
+    "Create a new page or sub-component in a Plasmic project",
     {
+      projectId: projectIdParam,
       name: z.string().describe("Display name for the component"),
       type: z.enum(["page", "component"]).describe("Whether to create a page or a component"),
       pagePath: z
@@ -116,14 +124,14 @@ export function registerCanvasTools(server: McpServer) {
         .optional()
         .describe("URL path for the page (e.g. /about). Required when type is 'page'."),
     },
-    async ({ name, type, pagePath }) => {
+    async ({ projectId, name, type, pagePath }) => {
       if (type === "page" && !pagePath) {
         return {
           content: [{ type: "text" as const, text: "pagePath is required when type is 'page'" }],
           isError: true,
         };
       }
-      const client = makeClient();
+      const client = makeClient(projectId);
       const component = await client.createComponent(name, type, pagePath);
       return {
         content: [
@@ -138,10 +146,10 @@ export function registerCanvasTools(server: McpServer) {
 
   server.tool(
     "publish_project",
-    "Publish the current state of the Plasmic project to production",
-    {},
-    async () => {
-      const client = makeClient();
+    "Publish the current state of a Plasmic project to production",
+    { projectId: projectIdParam },
+    async ({ projectId }) => {
+      const client = makeClient(projectId);
       const result = await client.publish();
       return {
         content: [

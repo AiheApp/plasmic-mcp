@@ -9,30 +9,44 @@ export const env = {
   cmsSecretToken: process.env.PLASMIC_CMS_SECRET_TOKEN,
 };
 
-export function requireStudioAuth() {
+export function requireStudioAuth(): void {
   if (!env.apiUser || !env.apiToken) {
     throw new Error(
       "PLASMIC_API_USER and PLASMIC_API_TOKEN are required. Set them in your .env file."
     );
   }
-  if (!env.projectId) {
-    throw new Error("PLASMIC_PROJECT_ID is required. Set it in your .env file.");
-  }
 }
 
-export function requireProjectToken() {
-  if (!env.projectToken) {
-    throw new Error("PLASMIC_PROJECT_TOKEN is required for this tool.");
-  }
-  if (!env.projectId) {
-    throw new Error("PLASMIC_PROJECT_ID is required. Set it in your .env file.");
-  }
-}
-
-export function requireCmsConfig() {
-  if (!env.cmsDatabaseId || !env.cmsPublicToken) {
+export function resolveProjectId(override?: string): string {
+  const id = override ?? env.projectId;
+  if (!id) {
     throw new Error(
-      "PLASMIC_CMS_DATABASE_ID and PLASMIC_CMS_PUBLIC_TOKEN are required for CMS tools."
+      "A project ID is required. Pass projectId as a tool parameter or set PLASMIC_PROJECT_ID in your .env file."
     );
   }
+  return id;
+}
+
+export function resolveProjectToken(override?: string): string {
+  const token = override ?? env.projectToken;
+  if (!token) {
+    throw new Error(
+      "A project token is required. Pass projectToken as a tool parameter or set PLASMIC_PROJECT_TOKEN in your .env file."
+    );
+  }
+  return token;
+}
+
+export function resolveCmsCredentials(
+  databaseIdOverride?: string,
+  publicTokenOverride?: string
+): { databaseId: string; publicToken: string } {
+  const databaseId = databaseIdOverride ?? env.cmsDatabaseId;
+  const publicToken = publicTokenOverride ?? env.cmsPublicToken;
+  if (!databaseId || !publicToken) {
+    throw new Error(
+      "CMS database ID and public token are required. Pass databaseId/publicToken as tool parameters or set PLASMIC_CMS_DATABASE_ID and PLASMIC_CMS_PUBLIC_TOKEN in your .env file."
+    );
+  }
+  return { databaseId, publicToken };
 }

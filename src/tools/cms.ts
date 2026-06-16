@@ -1,14 +1,29 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { env, requireCmsConfig } from "../env.js";
+import { env, resolveCmsCredentials } from "../env.js";
 import { PlasmicCmsClient } from "../clients/cms.js";
 
-function makeClient() {
-  requireCmsConfig();
+const databaseIdParam = z
+  .string()
+  .optional()
+  .describe("CMS database ID. Overrides PLASMIC_CMS_DATABASE_ID env var.");
+
+const publicTokenParam = z
+  .string()
+  .optional()
+  .describe("CMS public token. Overrides PLASMIC_CMS_PUBLIC_TOKEN env var.");
+
+const secretTokenParam = z
+  .string()
+  .optional()
+  .describe("CMS secret token for write operations. Overrides PLASMIC_CMS_SECRET_TOKEN env var.");
+
+function makeClient(databaseId?: string, publicToken?: string, secretToken?: string) {
+  const resolved = resolveCmsCredentials(databaseId, publicToken);
   return new PlasmicCmsClient(
-    env.cmsDatabaseId!,
-    env.cmsPublicToken!,
-    env.cmsSecretToken,
+    resolved.databaseId,
+    resolved.publicToken,
+    secretToken ?? env.cmsSecretToken,
     env.studioHost
   );
 }
@@ -16,10 +31,13 @@ function makeClient() {
 export function registerCmsTools(server: McpServer) {
   server.tool(
     "cms_list_tables",
-    "List all CMS tables (models) in the Plasmic CMS database",
-    {},
-    async () => {
-      const client = makeClient();
+    "List all CMS tables (models) in a Plasmic CMS database",
+    {
+      databaseId: databaseIdParam,
+      publicToken: publicTokenParam,
+    },
+    async ({ databaseId, publicToken }) => {
+      const client = makeClient(databaseId, publicToken);
       const tables = await client.listTables();
       return {
         content: [
@@ -36,13 +54,15 @@ export function registerCmsTools(server: McpServer) {
     "cms_query_rows",
     "Query rows from a Plasmic CMS table with optional pagination",
     {
+      databaseId: databaseIdParam,
+      publicToken: publicTokenParam,
       table: z.string().describe("Table identifier (e.g. 'blog-posts')"),
       limit: z.number().optional().describe("Maximum number of rows to return (default: 20)"),
       offset: z.number().optional().describe("Number of rows to skip for pagination"),
       locale: z.string().optional().describe("Locale code for localized content (e.g. 'en')"),
     },
-    async ({ table, limit = 20, offset, locale }) => {
-      const client = makeClient();
+    async ({ databaseId, publicToken, table, limit = 20, offset, locale }) => {
+      const client = makeClient(databaseId, publicToken);
       const result = await client.queryRows(table, { limit, offset, locale });
       return {
         content: [
@@ -59,11 +79,13 @@ export function registerCmsTools(server: McpServer) {
     "cms_get_row",
     "Get a specific CMS row by its ID",
     {
+      databaseId: databaseIdParam,
+      publicToken: publicTokenParam,
       table: z.string().describe("Table identifier"),
       rowId: z.string().describe("Row ID"),
     },
-    async ({ table, rowId }) => {
-      const client = makeClient();
+    async ({ databaseId, publicToken, table, rowId }) => {
+      const client = makeClient(databaseId, publicToken);
       const row = await client.getRow(table, rowId);
       return {
         content: [
@@ -80,11 +102,14 @@ export function registerCmsTools(server: McpServer) {
     "cms_create_row",
     "Create a new row in a Plasmic CMS table",
     {
+      databaseId: databaseIdParam,
+      publicToken: publicTokenParam,
+      secretToken: secretTokenParam,
       table: z.string().describe("Table identifier"),
       data: z.record(z.unknown()).describe("Field values for the new row as a JSON object"),
     },
-    async ({ table, data }) => {
-      const client = makeClient();
+    async ({ databaseId, publicToken, secretToken, table, data }) => {
+      const client = makeClient(databaseId, publicToken, secretToken);
       const row = await client.createRow(table, data);
       return {
         content: [
@@ -101,12 +126,15 @@ export function registerCmsTools(server: McpServer) {
     "cms_update_row",
     "Update an existing row in a Plasmic CMS table",
     {
+      databaseId: databaseIdParam,
+      publicToken: publicTokenParam,
+      secretToken: secretTokenParam,
       table: z.string().describe("Table identifier"),
       rowId: z.string().describe("Row ID to update"),
       data: z.record(z.unknown()).describe("Field values to update as a JSON object (partial update)"),
     },
-    async ({ table, rowId, data }) => {
-      const client = makeClient();
+    async ({ databaseId, publicToken, secretToken, table, rowId, data }) => {
+      const client = makeClient(databaseId, publicToken, secretToken);
       const row = await client.updateRow(table, rowId, data);
       return {
         content: [
@@ -123,11 +151,14 @@ export function registerCmsTools(server: McpServer) {
     "cms_delete_row",
     "Delete a row from a Plasmic CMS table",
     {
+      databaseId: databaseIdParam,
+      publicToken: publicTokenParam,
+      secretToken: secretTokenParam,
       table: z.string().describe("Table identifier"),
       rowId: z.string().describe("Row ID to delete"),
     },
-    async ({ table, rowId }) => {
-      const client = makeClient();
+    async ({ databaseId, publicToken, secretToken, table, rowId }) => {
+      const client = makeClient(databaseId, publicToken, secretToken);
       await client.deleteRow(table, rowId);
       return {
         content: [

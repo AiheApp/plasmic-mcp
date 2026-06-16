@@ -1,15 +1,24 @@
 import { z } from "zod";
-import { env, requireProjectToken } from "../env.js";
+import { env, resolveProjectId, resolveProjectToken } from "../env.js";
 import { PlasmicLoaderClient } from "../clients/loader.js";
-function makeClient() {
-    requireProjectToken();
-    return new PlasmicLoaderClient(env.projectId, env.projectToken, env.studioHost);
+const projectIdParam = z
+    .string()
+    .optional()
+    .describe("Plasmic project ID. Overrides PLASMIC_PROJECT_ID env var.");
+const projectTokenParam = z
+    .string()
+    .optional()
+    .describe("Project API token. Overrides PLASMIC_PROJECT_TOKEN env var. Required when projectId differs from the env default.");
+function makeClient(projectId, projectToken) {
+    return new PlasmicLoaderClient(resolveProjectId(projectId), resolveProjectToken(projectToken), env.studioHost);
 }
 export function registerLoaderTools(server) {
     server.tool("loader_list_pages", "List all pages via the Plasmic Loader API (includes page paths and metadata)", {
+        projectId: projectIdParam,
+        projectToken: projectTokenParam,
         preview: z.boolean().optional().describe("Use preview mode to see unpublished changes (default: false)"),
-    }, async ({ preview = false }) => {
-        const client = makeClient();
+    }, async ({ projectId, projectToken, preview = false }) => {
+        const client = makeClient(projectId, projectToken);
         const data = await client.getAllData(preview);
         const pages = data.components.filter((c) => c.isPage);
         return {
@@ -28,10 +37,12 @@ export function registerLoaderTools(server) {
         };
     });
     server.tool("loader_list_components", "List all components via the Plasmic Loader API", {
+        projectId: projectIdParam,
+        projectToken: projectTokenParam,
         preview: z.boolean().optional().describe("Use preview mode to see unpublished changes (default: false)"),
         pagesOnly: z.boolean().optional().describe("Only return page components (default: false)"),
-    }, async ({ preview = false, pagesOnly = false }) => {
-        const client = makeClient();
+    }, async ({ projectId, projectToken, preview = false, pagesOnly = false }) => {
+        const client = makeClient(projectId, projectToken);
         const data = await client.getAllData(preview);
         const components = pagesOnly
             ? data.components.filter((c) => c.isPage)
@@ -54,11 +65,12 @@ export function registerLoaderTools(server) {
         };
     });
     server.tool("loader_get_all_data", "Fetch all Plasmic project data via the Loader API (components, pages, project info). Warning: response can be large.", {
+        projectId: projectIdParam,
+        projectToken: projectTokenParam,
         preview: z.boolean().optional().describe("Use preview mode (default: false)"),
-    }, async ({ preview = false }) => {
-        const client = makeClient();
+    }, async ({ projectId, projectToken, preview = false }) => {
+        const client = makeClient(projectId, projectToken);
         const data = await client.getAllData(preview);
-        // Return metadata without the heavy module bundles to keep response manageable
         return {
             content: [
                 {

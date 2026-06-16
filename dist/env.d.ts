@@ -9,5 +9,9 @@ export declare const env: {
     cmsSecretToken: string | undefined;
 };
 export declare function requireStudioAuth(): void;
-export declare function requireProjectToken(): void;
-export declare function requireCmsConfig(): void;
+export declare function resolveProjectId(override?: string): string;
+export declare function resolveProjectToken(override?: string): string;
+export declare function resolveCmsCredentials(databaseIdOverride?: string, publicTokenOverride?: string): {
+    databaseId: string;
+    publicToken: string;
+};

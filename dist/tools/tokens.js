@@ -1,18 +1,23 @@
 import { z } from "zod";
-import { env, requireStudioAuth } from "../env.js";
+import { env, requireStudioAuth, resolveProjectId } from "../env.js";
 import { PlasmicStudioClient } from "../clients/studio.js";
-function makeClient() {
+const projectIdParam = z
+    .string()
+    .optional()
+    .describe("Plasmic project ID. Overrides PLASMIC_PROJECT_ID env var — use this to target a different project.");
+function makeClient(projectId) {
     requireStudioAuth();
-    return new PlasmicStudioClient(env.projectId, env.apiUser, env.apiToken, env.studioHost);
+    return new PlasmicStudioClient(resolveProjectId(projectId), env.apiUser, env.apiToken, env.studioHost);
 }
 export function registerTokenTools(server) {
-    server.tool("list_tokens", "List all design tokens in the Plasmic project (colors, typography, spacing, etc.)", {
+    server.tool("list_tokens", "List all design tokens in a Plasmic project (colors, typography, spacing, etc.)", {
+        projectId: projectIdParam,
         type: z
             .string()
             .optional()
             .describe("Filter by token type, e.g. 'color', 'font-size', 'spacing'"),
-    }, async ({ type }) => {
-        const client = makeClient();
+    }, async ({ projectId, type }) => {
+        const client = makeClient(projectId);
         const tokens = await client.listTokens();
         const filtered = type
             ? tokens.filter((t) => t.type.toLowerCase().includes(type.toLowerCase()))
@@ -27,10 +32,11 @@ export function registerTokenTools(server) {
         };
     });
     server.tool("update_token", "Update the value of a Plasmic design token by its ID", {
+        projectId: projectIdParam,
         tokenId: z.string().describe("The ID of the design token to update"),
         value: z.string().describe("The new value for the token (e.g. '#ff0000' for a color)"),
-    }, async ({ tokenId, value }) => {
-        const client = makeClient();
+    }, async ({ projectId, tokenId, value }) => {
+        const client = makeClient(projectId);
         const updated = await client.updateToken(tokenId, value);
         return {
             content: [
