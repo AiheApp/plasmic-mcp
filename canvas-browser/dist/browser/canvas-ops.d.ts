@@ -1,4 +1,4 @@
-import type { Frame, Page } from "playwright-core";
+import type { Page } from "playwright-core";
 export interface CanvasElement {
     id?: string;
     name: string;
@@ -17,19 +17,14 @@ export interface PropUpdate {
     tab?: "design" | "content";
 }
 /**
- * Get the inner Plasmic Studio iframe frame.
- * window.dbg.studioCtx and all Plasmic internal APIs live inside this frame.
- */
-export declare function getStudioFrame(page: Page): Promise<Frame>;
-/**
- * Read current canvas state via window.dbg.studioCtx inside the studio iframe.
- * Returns the active component name and focused component from Plasmic internals.
+ * Read current canvas state via window.dbg.studioCtx inside the inner canvas iframe.
+ * Evaluation must run in the nested iframe context — not page.evaluate().
  */
 export declare function getCanvasState(page: Page): Promise<CanvasState>;
 /** Select an element by name in the Plasmic Studio Layers panel. */
 export declare function selectElement(page: Page, elementName: string): Promise<void>;
 /**
- * Add an element to the canvas via the Plasmic add button.
+ * Add an element to the canvas via the Plasmic add drawer.
  * elementType must match a [data-plasmic-add-item-name] value, e.g. "Text", "Box", "Button".
  */
 export declare function addElement(page: Page, elementType: string, targetSlot?: string): Promise<void>;

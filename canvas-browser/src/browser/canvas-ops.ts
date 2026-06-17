@@ -1,4 +1,4 @@
-import type { Frame, Page } from "playwright-core";
+import type { FrameLocator, Page } from "playwright-core";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,29 +25,37 @@ export interface PropUpdate {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Frame helpers
 // ---------------------------------------------------------------------------
 
-/** Wait for the Plasmic Studio iframe to appear, confirming the editor is loaded. */
-async function waitForStudio(page: Page, timeoutMs = 15_000): Promise<void> {
-  await page.waitForSelector("iframe.__wab_studio-frame", { timeout: timeoutMs });
+/**
+ * The outer Studio iframe — contains all Studio UI (panels, toolbar, canvas area).
+ * All panel clicks, layer interactions, and keyboard shortcuts target this frame.
+ */
+function studioFrame(page: Page): FrameLocator {
+  return page.frameLocator("iframe.studio-frame");
 }
 
 /**
- * Get the inner Plasmic Studio iframe frame.
- * window.dbg.studioCtx and all Plasmic internal APIs live inside this frame.
+ * The inner canvas iframe nested inside the Studio frame.
+ * window.dbg.studioCtx lives here. All JS evaluation of Plasmic internals
+ * must run in this frame's context.
  */
-export async function getStudioFrame(page: Page): Promise<Frame> {
-  const iframe = page.locator("iframe.__wab_studio-frame").first();
-  await iframe.waitFor({ timeout: 15_000 });
-  const handle = await iframe.elementHandle();
-  const frame = await handle?.contentFrame();
-  if (!frame) {
-    throw new Error(
-      "Could not access Plasmic Studio iframe. Is the project fully loaded?"
-    );
-  }
-  return frame;
+function canvasFrame(page: Page): FrameLocator {
+  return page
+    .frameLocator("iframe.studio-frame")
+    .frameLocator("iframe.__wab_studio-frame");
+}
+
+/** Wait for the outer Studio iframe to appear, confirming the editor is loaded. */
+async function waitForStudio(page: Page, timeoutMs = 15_000): Promise<void> {
+  await page.waitForSelector("iframe.studio-frame", { timeout: timeoutMs });
+}
+
+/** Save the current state via Ctrl/Cmd+S in the Studio frame. */
+async function save(page: Page): Promise<void> {
+  await studioFrame(page).locator("body").press("Control+s");
+  await page.waitForTimeout(600);
 }
 
 // ---------------------------------------------------------------------------
@@ -55,15 +63,13 @@ export async function getStudioFrame(page: Page): Promise<Frame> {
 // ---------------------------------------------------------------------------
 
 /**
- * Read current canvas state via window.dbg.studioCtx inside the studio iframe.
- * Returns the active component name and focused component from Plasmic internals.
+ * Read current canvas state via window.dbg.studioCtx inside the inner canvas iframe.
+ * Evaluation must run in the nested iframe context — not page.evaluate().
  */
 export async function getCanvasState(page: Page): Promise<CanvasState> {
   await waitForStudio(page);
-  const frame = await getStudioFrame(page);
 
-  const raw = await frame.evaluate(() => {
-    // window.dbg.studioCtx is confirmed available in Plasmic's OSS build
+  const raw = await canvasFrame(page).locator("body").evaluate(() => {
     const dbg = (window as unknown as Record<string, unknown>)["dbg"] as
       | { studioCtx?: Record<string, unknown> }
       | undefined;
@@ -85,8 +91,7 @@ export async function getCanvasState(page: Page): Promise<CanvasState> {
     }
   });
 
-  // Also pull a text summary from the Layers panel for convenience
-  const layersText = await page
+  const layersText = await studioFrame(page)
     .locator(".canvas-editor__left-pane")
     .textContent({ timeout: 3_000 })
     .catch(() => null);
@@ -105,11 +110,15 @@ export async function getCanvasState(page: Page): Promise<CanvasState> {
 /** Select an element by name in the Plasmic Studio Layers panel. */
 export async function selectElement(page: Page, elementName: string): Promise<void> {
   await waitForStudio(page);
+  const sf = studioFrame(page);
 
-  const leftPane = page.locator(".canvas-editor__left-pane").first();
+  const leftPane = sf.locator(".canvas-editor__left-pane");
   await leftPane.waitFor({ timeout: 5_000 });
 
-  const item = leftPane.locator(`text="${elementName}"`).first();
+  // Try data-test-node-name attribute first, then plain text match
+  const item = leftPane
+    .locator(`[data-test-node-name="${elementName}"], text="${elementName}"`)
+    .first();
   const found = await item.isVisible({ timeout: 3_000 }).catch(() => false);
   if (!found) {
     throw new Error(
@@ -124,7 +133,7 @@ export async function selectElement(page: Page, elementName: string): Promise<vo
 // ---------------------------------------------------------------------------
 
 /**
- * Add an element to the canvas via the Plasmic add button.
+ * Add an element to the canvas via the Plasmic add drawer.
  * elementType must match a [data-plasmic-add-item-name] value, e.g. "Text", "Box", "Button".
  */
 export async function addElement(
@@ -133,31 +142,30 @@ export async function addElement(
   targetSlot?: string
 ): Promise<void> {
   await waitForStudio(page);
+  const sf = studioFrame(page);
 
   if (targetSlot) {
     await selectElement(page, targetSlot);
     await page.waitForTimeout(300);
   }
 
-  // Click the confirmed add button selector from Plasmic's test suite
-  const addBtn = page.locator('[data-test-id="add-button"]').first();
+  const addBtn = sf.locator('[data-test-id="add-drawer"]').first();
   await addBtn.waitFor({ timeout: 5_000 });
   await addBtn.click();
   await page.waitForTimeout(400);
 
-  // Click the element using the confirmed attribute from Plasmic's test suite
-  const item = page
-    .locator(`[data-plasmic-add-item-name="${elementType}"]`)
-    .first();
+  const item = sf.locator(`li[data-plasmic-add-item-name="${elementType}"]`).first();
   const found = await item.isVisible({ timeout: 5_000 }).catch(() => false);
   if (!found) {
     throw new Error(
-      `Insert item "${elementType}" not found ([data-plasmic-add-item-name="${elementType}"]). ` +
+      `Insert item "${elementType}" not found (li[data-plasmic-add-item-name="${elementType}"]). ` +
         `Check the element type name matches what Plasmic shows in the add panel.`
     );
   }
   await item.click();
   await page.waitForTimeout(500);
+
+  await save(page);
 }
 
 // ---------------------------------------------------------------------------
@@ -171,8 +179,12 @@ export async function removeElement(page: Page, elementName?: string): Promise<v
     await selectElement(page, elementName);
     await page.waitForTimeout(200);
   }
-  await page.keyboard.press("Delete");
+  // Keyboard events must target the Studio frame body — page.keyboard.press()
+  // fires on the outer shell and never reaches the Studio iframe's event handlers.
+  await studioFrame(page).locator("body").press("Delete");
   await page.waitForTimeout(300);
+
+  await save(page);
 }
 
 // ---------------------------------------------------------------------------
@@ -189,32 +201,27 @@ export async function setElementProps(
   elementName?: string
 ): Promise<void> {
   await waitForStudio(page);
+  const sf = studioFrame(page);
 
   if (elementName) {
     await selectElement(page, elementName);
     await page.waitForTimeout(300);
   }
 
-  // Right panel — selector not confirmed; use broad fallback
-  const rightPanel = page
-    .locator(".right-pane, [class*='right-panel'], [class*='rightPane']")
-    .first();
+  const rightPanel = sf.locator(".canvas-editor__right-pane").first();
   const panelVisible = await rightPanel.isVisible({ timeout: 3_000 }).catch(() => false);
   if (!panelVisible) {
     throw new Error(
-      "Right panel not found. The selector may need updating for your Plasmic version."
+      "Right panel (.canvas-editor__right-pane) not found. Is an element selected?"
     );
   }
 
   for (const prop of props) {
     const tabName = prop.tab ?? "design";
-    const tab = rightPanel
-      .locator(`[role="tab"]:has-text("${tabName}")`)
-      .first();
+    const tab = rightPanel.locator(`[role="tab"]:has-text("${tabName}")`).first();
     const tabVisible = await tab.isVisible({ timeout: 2_000 }).catch(() => false);
     if (tabVisible) await tab.click();
 
-    // Try data-prop attribute first, then label proximity
     const propRow = rightPanel
       .locator(`[data-prop="${prop.name}"], label:has-text("${prop.name}")`)
       .first();
@@ -238,6 +245,8 @@ export async function setElementProps(
     }
     await page.waitForTimeout(200);
   }
+
+  await save(page);
 }
 
 // ---------------------------------------------------------------------------
@@ -256,10 +265,13 @@ export async function moveElement(
   await page.waitForTimeout(200);
 
   const key = direction === "up" ? "Alt+ArrowUp" : "Alt+ArrowDown";
+  const sf = studioFrame(page);
   for (let i = 0; i < steps; i++) {
-    await page.keyboard.press(key);
+    await sf.locator("body").press(key);
     await page.waitForTimeout(150);
   }
+
+  await save(page);
 }
 
 // ---------------------------------------------------------------------------
