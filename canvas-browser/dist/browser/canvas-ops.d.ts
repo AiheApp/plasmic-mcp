@@ -1,4 +1,4 @@
-import type { Page } from "playwright-core";
+import type { Frame, Page } from "playwright-core";
 export interface CanvasElement {
     id?: string;
     name: string;
@@ -11,33 +11,36 @@ export interface CanvasState {
     elements: CanvasElement[];
     raw?: unknown;
 }
-/**
- * Read the current canvas state by probing Plasmic's internal globals.
- * Falls back to reading the accessibility tree if no internal API is found.
- */
-export declare function getCanvasState(page: Page): Promise<CanvasState>;
-/** Select an element by name using the Layers panel search. */
-export declare function selectElement(page: Page, elementName: string): Promise<void>;
-/**
- * Add an element to the canvas using the Insert panel.
- * elementType examples: "Text", "Button", "Box", "Image", "Icon"
- */
-export declare function addElement(page: Page, elementType: string, targetSlot?: string): Promise<void>;
-/** Remove an element from the canvas. Selects it first if elementName is given. */
-export declare function removeElement(page: Page, elementName?: string): Promise<void>;
 export interface PropUpdate {
-    /** Prop name as shown in the right panel, e.g. "color", "fontSize", "content" */
     name: string;
     value: string;
-    /** Which panel tab to look in: "design" (default) or "content" */
     tab?: "design" | "content";
 }
 /**
- * Set props or styles on the currently selected element (or select it first).
- * Interacts with the right-side properties panel.
+ * Get the inner Plasmic Studio iframe frame.
+ * window.dbg.studioCtx and all Plasmic internal APIs live inside this frame.
+ */
+export declare function getStudioFrame(page: Page): Promise<Frame>;
+/**
+ * Read current canvas state via window.dbg.studioCtx inside the studio iframe.
+ * Returns the active component name and focused component from Plasmic internals.
+ */
+export declare function getCanvasState(page: Page): Promise<CanvasState>;
+/** Select an element by name in the Plasmic Studio Layers panel. */
+export declare function selectElement(page: Page, elementName: string): Promise<void>;
+/**
+ * Add an element to the canvas via the Plasmic add button.
+ * elementType must match a [data-plasmic-add-item-name] value, e.g. "Text", "Box", "Button".
+ */
+export declare function addElement(page: Page, elementType: string, targetSlot?: string): Promise<void>;
+/** Delete an element from the canvas. Selects it by name first if provided. */
+export declare function removeElement(page: Page, elementName?: string): Promise<void>;
+/**
+ * Set props or styles on an element via the Plasmic right-side panel.
+ * Selects the element by name first if elementName is provided.
  */
 export declare function setElementProps(page: Page, props: PropUpdate[], elementName?: string): Promise<void>;
-/** Move the selected element up or down in its parent's children list. */
+/** Move an element up or down in its parent using Plasmic's keyboard shortcuts. */
 export declare function moveElement(page: Page, elementName: string, direction: "up" | "down", steps?: number): Promise<void>;
 /** Take a screenshot of the current Studio state and return as base64 PNG. */
 export declare function takeScreenshot(page: Page): Promise<string>;
