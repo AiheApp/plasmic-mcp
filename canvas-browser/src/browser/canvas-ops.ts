@@ -31,9 +31,14 @@ export interface PropUpdate {
 /**
  * The outer Studio iframe — contains all Studio UI (panels, toolbar, canvas area).
  * All panel clicks, layer interactions, and keyboard shortcuts target this frame.
+ * Exported as studioFrameOf for use in tool files.
  */
-function studioFrame(page: Page): FrameLocator {
+export function studioFrameOf(page: Page): FrameLocator {
   return page.frameLocator("iframe.studio-frame");
+}
+
+function studioFrame(page: Page): FrameLocator {
+  return studioFrameOf(page);
 }
 
 /**
@@ -149,10 +154,10 @@ export async function addElement(
     await page.waitForTimeout(300);
   }
 
-  const addBtn = sf.locator('[data-test-id="add-drawer"]').first();
-  await addBtn.waitFor({ timeout: 5_000 });
-  await addBtn.click();
-  await page.waitForTimeout(400);
+  // Click the + button to open the insert panel, then wait for the drawer
+  await sf.locator('[data-test-id="add-button"]').click();
+  await sf.locator('[data-test-id="add-drawer"]').waitFor({ timeout: 5_000 });
+  await page.waitForTimeout(200);
 
   const item = sf.locator(`li[data-plasmic-add-item-name="${elementType}"]`).first();
   const found = await item.isVisible({ timeout: 5_000 }).catch(() => false);
@@ -223,7 +228,7 @@ export async function setElementProps(
     if (tabVisible) await tab.click();
 
     const propRow = rightPanel
-      .locator(`[data-prop="${prop.name}"], label:has-text("${prop.name}")`)
+      .locator(`[data-plasmic-prop="${prop.name}"], label:has-text("${prop.name}")`)
       .first();
     const propVisible = await propRow.isVisible({ timeout: 2_000 }).catch(() => false);
 

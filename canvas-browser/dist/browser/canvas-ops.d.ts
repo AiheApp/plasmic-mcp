@@ -1,4 +1,4 @@
-import type { Page } from "playwright-core";
+import type { FrameLocator, Page } from "playwright-core";
 export interface CanvasElement {
     id?: string;
     name: string;
@@ -16,6 +16,12 @@ export interface PropUpdate {
     value: string;
     tab?: "design" | "content";
 }
+/**
+ * The outer Studio iframe — contains all Studio UI (panels, toolbar, canvas area).
+ * All panel clicks, layer interactions, and keyboard shortcuts target this frame.
+ * Exported as studioFrameOf for use in tool files.
+ */
+export declare function studioFrameOf(page: Page): FrameLocator;
 /**
  * Read current canvas state via window.dbg.studioCtx inside the inner canvas iframe.
  * Evaluation must run in the nested iframe context — not page.evaluate().

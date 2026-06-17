@@ -10,6 +10,7 @@ import {
   setElementProps,
   moveElement,
   takeScreenshot,
+  studioFrameOf,
   type PropUpdate,
 } from "../browser/canvas-ops.js";
 
@@ -196,8 +197,9 @@ export function registerStudioBrowserTools(server: McpServer) {
       const pid = resolveProjectId(projectId);
       await withStudioPage(pid, async (page) => {
         if (componentName) {
-          // Try clicking the component in the left nav / page list
-          const navItem = page
+          // Nav items are inside the studio-frame iframe, not the outer page
+          const sf = studioFrameOf(page);
+          const navItem = sf
             .locator(`[title="${componentName}"], [aria-label="${componentName}"], text="${componentName}"`)
             .first();
           const visible = await navItem.isVisible({ timeout: 3000 }).catch(() => false);

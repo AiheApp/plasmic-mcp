@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveProjectId } from "../env.js";
 import { withStudioPage } from "../browser/session.js";
-import { getCanvasState, selectElement, addElement, removeElement, setElementProps, moveElement, takeScreenshot, } from "../browser/canvas-ops.js";
+import { getCanvasState, selectElement, addElement, removeElement, setElementProps, moveElement, takeScreenshot, studioFrameOf, } from "../browser/canvas-ops.js";
 const projectIdParam = z
     .string()
     .optional()
@@ -130,8 +130,9 @@ export function registerStudioBrowserTools(server) {
         const pid = resolveProjectId(projectId);
         await withStudioPage(pid, async (page) => {
             if (componentName) {
-                // Try clicking the component in the left nav / page list
-                const navItem = page
+                // Nav items are inside the studio-frame iframe, not the outer page
+                const sf = studioFrameOf(page);
+                const navItem = sf
                     .locator(`[title="${componentName}"], [aria-label="${componentName}"], text="${componentName}"`)
                     .first();
                 const visible = await navItem.isVisible({ timeout: 3000 }).catch(() => false);
