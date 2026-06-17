@@ -1,0 +1,25 @@
+{
+  "name": "plasmic-mcp-canvas-browser",
+  "version": "0.1.0",
+  "description": "MCP server for direct Plasmic Studio canvas manipulation via Playwright + CDP",
+  "type": "module",
+  "bin": { "plasmic-canvas-mcp": "dist/index.js" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "dotenv": "^16.4.5",
+    "playwright-core": "^1.45.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": { "node": ">=20" }
+}
