@@ -138,22 +138,70 @@ export async function insertHtml(page: Page, html: string): Promise<void> {
 
   const sf = studioFrame(page);
 
-  // Focus the canvas so the paste lands on the open frame.
-  await sf.locator("body").click().catch(() => {});
+  // Ensure a frame is open/focused; Studio's paste handler needs a ViewCtx and
+  // requires the canvas (document.body) to be the active element.
+  const state = await sf.locator("body").evaluate((_el) => {
+    const dbg = (window as unknown as Record<string, unknown>)["dbg"] as
+      | { studioCtx?: Record<string, unknown> }
+      | undefined;
+    const ctx = dbg?.studioCtx;
+    const focused =
+      typeof ctx?.["focusedViewCtx"] === "function"
+        ? (ctx["focusedViewCtx"] as () => unknown)()
+        : null;
+    const firstVc =
+      typeof ctx?.["focusedOrFirstViewCtx"] === "function"
+        ? (ctx["focusedOrFirstViewCtx"] as () => unknown)()
+        : null;
+    return { hasViewCtx: !!(focused ?? firstVc) };
+  }).catch(() => ({ hasViewCtx: false }));
 
-  // Put the HTML on the clipboard as plain text. The Studio paste handler
-  // (clipboard/paste.tsx) reads clipboard.getText() and routes "<"-prefixed
-  // text to the web-importer. Requires clipboard permission on the context
-  // (granted in session.ts).
-  await sf.locator("body").evaluate(async (_el, h) => {
-    await navigator.clipboard.writeText(h as string);
+  if (!state.hasViewCtx) {
+    throw new Error(
+      "No frame is open to receive the section. Open a page or component in " +
+        "Studio (or select a frame), then try again."
+    );
+  }
+
+  // Call studioCtx.paste() directly with a mock ReadableClipboard. This is the
+  // same paste router the Studio uses, but bypasses the keyboard/clipboard-event
+  // path (which is guarded by isFocusedOnCanvas + blocked by the cross-origin
+  // iframe clipboard restriction). The router reads getText() and routes
+  // "<"-prefixed text through the web-importer (htmlToTpl) — the path the
+  // copilot Apply uses. Requires allowHtmlPaste devflag (true on this instance).
+  const result = await studioFrame(page).locator("body").evaluate(async (_el, h) => {
+    const dbg = (window as unknown as Record<string, unknown>)["dbg"] as
+      | { studioCtx?: Record<string, unknown> }
+      | undefined;
+    const ctx = dbg?.studioCtx;
+    if (!ctx || typeof ctx["paste"] !== "function") {
+      return { ok: false, reason: "studioCtx.paste unavailable" };
+    }
+    const mockClipboard = {
+      getPlasmicData: () => undefined,
+      getText: () => h as string,
+      getImage: () => Promise.resolve(undefined),
+    };
+    try {
+      // Call as a method so `this` is bound to studioCtx (extracting the
+      // function into a variable would lose `this` and silently no-op).
+      await (ctx as unknown as { paste: (c: unknown) => Promise<unknown> }).paste(
+        mockClipboard
+      );
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: (e as Error)?.message?.slice(0, 160) ?? "paste failed" };
+    }
   }, trimmed);
-  await page.waitForTimeout(200);
 
-  // Paste (Cmd+V on macOS) → triggers htmlToTpl on the focused frame.
-  await sf.locator("body").press("Meta+v");
-  await page.waitForTimeout(1500);
+  if (!result.ok) {
+    throw new Error(
+      `Couldn't place the section on the canvas: ${result.reason}. ` +
+        "Make sure a page or frame is open in Studio."
+    );
+  }
 
+  await page.waitForTimeout(1200);
   await save(page);
 }
 
@@ -212,7 +260,15 @@ export async function selectElement(page: Page, elementName: string): Promise<vo
   const sf = studioFrame(page);
 
   const leftPane = sf.locator(".canvas-editor__left-pane");
-  await leftPane.waitFor({ timeout: 5_000 });
+  const paneReady = await leftPane
+    .waitFor({ timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!paneReady) {
+    throw new Error(
+      "The Layers panel isn't available — open a page or component in Studio first, then try again."
+    );
+  }
 
   const item = leftPane
     .locator(`[data-test-node-name="${elementName}"], text="${elementName}"`)
@@ -220,7 +276,7 @@ export async function selectElement(page: Page, elementName: string): Promise<vo
   const found = await item.isVisible({ timeout: 3_000 }).catch(() => false);
   if (!found) {
     throw new Error(
-      `Element "${elementName}" not found in the Layers panel (.canvas-editor__left-pane).`
+      `Element "${elementName}" wasn't found in the Layers panel. Check the name matches a layer shown in Studio.`
     );
   }
   await item.click();
