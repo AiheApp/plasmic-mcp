@@ -29,6 +29,23 @@ export interface PropUpdate {
  */
 export declare function studioFrameOf(page: Page): FrameLocator;
 /**
+ * Preflight a mutating canvas action. Throws a plain-English, designer-facing
+ * error (never a raw Playwright/stack error) when the canvas isn't ready.
+ */
+export declare function preflightCanvas(page: Page): Promise<void>;
+/** Undo the last change via Ctrl/Cmd+Z in the Studio frame. */
+export declare function undo(page: Page): Promise<void>;
+/**
+ * Insert a full HTML/CSS section onto the canvas in one shot — the high-level
+ * "build me a section" verb for designers. Drives Plasmic's web-importer the
+ * same way a paste does: the Studio paste handler reads the clipboard text and
+ * passes anything starting with "<" through htmlToTpl.
+ *
+ * Requires a frame/component to be open (preflight surfaces a plain-English
+ * error otherwise). Returns nothing; callers should screenshot to confirm.
+ */
+export declare function insertHtml(page: Page, html: string): Promise<void>;
+/**
  * Read current canvas state. window.dbg.studioCtx lives in the Studio SPA frame
  * (the same frame as the UI panels).
  */

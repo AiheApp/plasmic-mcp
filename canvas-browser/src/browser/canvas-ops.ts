@@ -65,6 +65,98 @@ async function save(page: Page): Promise<void> {
   await page.waitForTimeout(600);
 }
 
+/**
+ * Returns the Studio's window.dbg.studioCtx-derived focus state, used to give
+ * designers plain-English guidance instead of a Playwright stack trace.
+ */
+async function focusState(
+  page: Page
+): Promise<{ ready: boolean; hasComponentOpen: boolean }> {
+  try {
+    const raw = await studioFrame(page)
+      .locator("body")
+      .evaluate(() => {
+        const dbg = (window as unknown as Record<string, unknown>)["dbg"] as
+          | { studioCtx?: Record<string, unknown> }
+          | undefined;
+        if (!dbg?.studioCtx) return { ready: false, hasComponentOpen: false };
+        const ctx = dbg.studioCtx;
+        const vc =
+          typeof ctx["focusedOrFirstViewCtx"] === "function"
+            ? (ctx["focusedOrFirstViewCtx"] as () => unknown)()
+            : null;
+        return { ready: true, hasComponentOpen: !!vc };
+      });
+    return raw as { ready: boolean; hasComponentOpen: boolean };
+  } catch {
+    return { ready: false, hasComponentOpen: false };
+  }
+}
+
+/**
+ * Preflight a mutating canvas action. Throws a plain-English, designer-facing
+ * error (never a raw Playwright/stack error) when the canvas isn't ready.
+ */
+export async function preflightCanvas(page: Page): Promise<void> {
+  try {
+    await waitForStudio(page, 60_000);
+  } catch {
+    throw new Error(
+      "Plasmic Studio isn't loaded yet. Open your project in Chrome and wait " +
+        "for the canvas to appear, then try again."
+    );
+  }
+}
+
+/** Undo the last change via Ctrl/Cmd+Z in the Studio frame. */
+export async function undo(page: Page): Promise<void> {
+  await preflightCanvas(page);
+  // Mac uses Cmd+Z; the Studio runs in the user's local Chrome on macOS.
+  await studioFrame(page).locator("body").press("Meta+z");
+  await page.waitForTimeout(400);
+}
+
+/**
+ * Insert a full HTML/CSS section onto the canvas in one shot — the high-level
+ * "build me a section" verb for designers. Drives Plasmic's web-importer the
+ * same way a paste does: the Studio paste handler reads the clipboard text and
+ * passes anything starting with "<" through htmlToTpl.
+ *
+ * Requires a frame/component to be open (preflight surfaces a plain-English
+ * error otherwise). Returns nothing; callers should screenshot to confirm.
+ */
+export async function insertHtml(page: Page, html: string): Promise<void> {
+  await preflightCanvas(page);
+
+  const trimmed = html.trim();
+  if (!trimmed.startsWith("<")) {
+    throw new Error(
+      "insertHtml expects an HTML snippet starting with '<' (e.g. " +
+        "\"<div>...</div>\" or \"<style>...</style><div>...</div>\")."
+    );
+  }
+
+  const sf = studioFrame(page);
+
+  // Focus the canvas so the paste lands on the open frame.
+  await sf.locator("body").click().catch(() => {});
+
+  // Put the HTML on the clipboard as plain text. The Studio paste handler
+  // (clipboard/paste.tsx) reads clipboard.getText() and routes "<"-prefixed
+  // text to the web-importer. Requires clipboard permission on the context
+  // (granted in session.ts).
+  await sf.locator("body").evaluate(async (_el, h) => {
+    await navigator.clipboard.writeText(h as string);
+  }, trimmed);
+  await page.waitForTimeout(200);
+
+  // Paste (Cmd+V on macOS) → triggers htmlToTpl on the focused frame.
+  await sf.locator("body").press("Meta+v");
+  await page.waitForTimeout(1500);
+
+  await save(page);
+}
+
 // ---------------------------------------------------------------------------
 // Read
 // ---------------------------------------------------------------------------

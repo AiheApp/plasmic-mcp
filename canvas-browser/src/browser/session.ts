@@ -140,6 +140,14 @@ export async function withStudioPage<T>(
     page = await navigateToStudio(ctx, projectId);
   }
 
+  // Step 3.5: Grant clipboard permission so studio_insert_html can write to the
+  // clipboard and paste. Best-effort — not all CDP contexts support this.
+  try {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  } catch {
+    // ignore — insert_html will surface a clear error if the paste can't run
+  }
+
   // Step 4: Run the operation
   try {
     return await fn(page);

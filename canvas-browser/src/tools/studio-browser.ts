@@ -10,6 +10,8 @@ import {
   setElementProps,
   moveElement,
   takeScreenshot,
+  insertHtml,
+  undo,
   studioFrameOf,
   type PropUpdate,
 } from "../browser/canvas-ops.js";
@@ -217,6 +219,55 @@ export function registerStudioBrowserTools(server: McpServer) {
               ? `Navigated to "${componentName}" in Studio.`
               : "Studio page is active.",
           },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "studio_insert_html",
+    "Build a whole section at once: insert an HTML/CSS snippet onto the canvas " +
+      "in one call (e.g. a hero, a login form, a pricing table). Pass a complete " +
+      "HTML fragment starting with '<'; a <style> block is supported. A page or " +
+      "component must be open in Studio. Returns a screenshot of the result.",
+    {
+      projectId: projectIdParam,
+      html: z
+        .string()
+        .describe(
+          "HTML to insert, starting with '<'. May include a leading <style>...</style> block."
+        ),
+    },
+    async ({ projectId, html }) => {
+      const pid = resolveProjectId(projectId);
+      const base64 = await withStudioPage(pid, async (page) => {
+        await insertHtml(page, html);
+        return takeScreenshot(page);
+      });
+      return {
+        content: [
+          { type: "text" as const, text: "Inserted the section onto the canvas." },
+          { type: "image" as const, data: base64, mimeType: "image/png" },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "studio_undo",
+    "Undo the last change on the Plasmic canvas (Cmd+Z). Returns a screenshot " +
+      "of the result so you can confirm what was reverted.",
+    { projectId: projectIdParam },
+    async ({ projectId }) => {
+      const pid = resolveProjectId(projectId);
+      const base64 = await withStudioPage(pid, async (page) => {
+        await undo(page);
+        return takeScreenshot(page);
+      });
+      return {
+        content: [
+          { type: "text" as const, text: "Undid the last change." },
+          { type: "image" as const, data: base64, mimeType: "image/png" },
         ],
       };
     }
