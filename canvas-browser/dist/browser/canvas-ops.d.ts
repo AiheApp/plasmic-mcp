@@ -17,14 +17,20 @@ export interface PropUpdate {
     tab?: "design" | "content";
 }
 /**
- * The outer Studio iframe — contains all Studio UI (panels, toolbar, canvas area).
- * All panel clicks, layer interactions, and keyboard shortcuts target this frame.
- * Exported as studioFrameOf for use in tool files.
+ * The Plasmic Studio SPA is nested two levels deep inside the outer page:
+ *
+ *   studio.aihe.dev (outer page)
+ *     └── iframe.studio-frame  →  canvas.aihe.dev/#origin=...  (thin wrapper)
+ *          └── iframe.__wab_studio-frame  →  canvas.aihe.dev/  (ACTUAL Studio SPA)
+ *               └── artboard preview iframes ...
+ *
+ * All Studio UI elements (panels, toolbar, add-button, keyboard handlers) live in
+ * the innermost frame. The outer iframe.studio-frame wrapper has no UI content.
  */
 export declare function studioFrameOf(page: Page): FrameLocator;
 /**
- * Read current canvas state via window.dbg.studioCtx inside the inner canvas iframe.
- * Evaluation must run in the nested iframe context — not page.evaluate().
+ * Read current canvas state. window.dbg.studioCtx lives in the Studio SPA frame
+ * (the same frame as the UI panels).
  */
 export declare function getCanvasState(page: Page): Promise<CanvasState>;
 /** Select an element by name in the Plasmic Studio Layers panel. */
@@ -36,10 +42,7 @@ export declare function selectElement(page: Page, elementName: string): Promise<
 export declare function addElement(page: Page, elementType: string, targetSlot?: string): Promise<void>;
 /** Delete an element from the canvas. Selects it by name first if provided. */
 export declare function removeElement(page: Page, elementName?: string): Promise<void>;
-/**
- * Set props or styles on an element via the Plasmic right-side panel.
- * Selects the element by name first if elementName is provided.
- */
+/** Set props or styles on an element via the Plasmic right-side panel. */
 export declare function setElementProps(page: Page, props: PropUpdate[], elementName?: string): Promise<void>;
 /** Move an element up or down in its parent using Plasmic's keyboard shortcuts. */
 export declare function moveElement(page: Page, elementName: string, direction: "up" | "down", steps?: number): Promise<void>;

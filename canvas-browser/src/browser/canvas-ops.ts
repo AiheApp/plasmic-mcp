@@ -29,32 +29,34 @@ export interface PropUpdate {
 // ---------------------------------------------------------------------------
 
 /**
- * The outer Studio iframe — contains all Studio UI (panels, toolbar, canvas area).
- * All panel clicks, layer interactions, and keyboard shortcuts target this frame.
- * Exported as studioFrameOf for use in tool files.
+ * The Plasmic Studio SPA is nested two levels deep inside the outer page:
+ *
+ *   studio.aihe.dev (outer page)
+ *     └── iframe.studio-frame  →  canvas.aihe.dev/#origin=...  (thin wrapper)
+ *          └── iframe.__wab_studio-frame  →  canvas.aihe.dev/  (ACTUAL Studio SPA)
+ *               └── artboard preview iframes ...
+ *
+ * All Studio UI elements (panels, toolbar, add-button, keyboard handlers) live in
+ * the innermost frame. The outer iframe.studio-frame wrapper has no UI content.
  */
 export function studioFrameOf(page: Page): FrameLocator {
-  return page.frameLocator("iframe.studio-frame");
+  return page
+    .frameLocator("iframe.studio-frame")
+    .frameLocator("iframe.__wab_studio-frame");
 }
 
 function studioFrame(page: Page): FrameLocator {
   return studioFrameOf(page);
 }
 
-/**
- * The inner canvas iframe nested inside the Studio frame.
- * window.dbg.studioCtx lives here. All JS evaluation of Plasmic internals
- * must run in this frame's context.
- */
-function canvasFrame(page: Page): FrameLocator {
-  return page
-    .frameLocator("iframe.studio-frame")
-    .frameLocator("iframe.__wab_studio-frame");
-}
-
-/** Wait for the outer Studio iframe to appear, confirming the editor is loaded. */
-async function waitForStudio(page: Page, timeoutMs = 15_000): Promise<void> {
+/** Wait for the Studio UI to be interactive (add-button visible in Studio SPA frame). */
+async function waitForStudio(page: Page, timeoutMs = 60_000): Promise<void> {
+  // Wait for the outer wrapper iframe to exist first
   await page.waitForSelector("iframe.studio-frame", { timeout: timeoutMs });
+  // Then wait for the Studio SPA's add-button — confirms the app is fully mounted
+  await studioFrameOf(page)
+    .locator('[data-test-id="add-button"]')
+    .waitFor({ timeout: timeoutMs });
 }
 
 /** Save the current state via Ctrl/Cmd+S in the Studio frame. */
@@ -68,13 +70,13 @@ async function save(page: Page): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Read current canvas state via window.dbg.studioCtx inside the inner canvas iframe.
- * Evaluation must run in the nested iframe context — not page.evaluate().
+ * Read current canvas state. window.dbg.studioCtx lives in the Studio SPA frame
+ * (the same frame as the UI panels).
  */
 export async function getCanvasState(page: Page): Promise<CanvasState> {
   await waitForStudio(page);
 
-  const raw = await canvasFrame(page).locator("body").evaluate(() => {
+  const raw = await studioFrame(page).locator("body").evaluate(() => {
     const dbg = (window as unknown as Record<string, unknown>)["dbg"] as
       | { studioCtx?: Record<string, unknown> }
       | undefined;
@@ -94,11 +96,11 @@ export async function getCanvasState(page: Page): Promise<CanvasState> {
     } catch (e) {
       return { error: String(e) };
     }
-  });
+  }).catch(() => ({ error: "Studio frame not available" }));
 
   const layersText = await studioFrame(page)
     .locator(".canvas-editor__left-pane")
-    .textContent({ timeout: 3_000 })
+    .textContent({ timeout: 5_000 })
     .catch(() => null);
 
   return {
@@ -120,7 +122,6 @@ export async function selectElement(page: Page, elementName: string): Promise<vo
   const leftPane = sf.locator(".canvas-editor__left-pane");
   await leftPane.waitFor({ timeout: 5_000 });
 
-  // Try data-test-node-name attribute first, then plain text match
   const item = leftPane
     .locator(`[data-test-node-name="${elementName}"], text="${elementName}"`)
     .first();
@@ -154,7 +155,6 @@ export async function addElement(
     await page.waitForTimeout(300);
   }
 
-  // Click the + button to open the insert panel, then wait for the drawer
   await sf.locator('[data-test-id="add-button"]').click();
   await sf.locator('[data-test-id="add-drawer"]').waitFor({ timeout: 5_000 });
   await page.waitForTimeout(200);
@@ -184,8 +184,6 @@ export async function removeElement(page: Page, elementName?: string): Promise<v
     await selectElement(page, elementName);
     await page.waitForTimeout(200);
   }
-  // Keyboard events must target the Studio frame body — page.keyboard.press()
-  // fires on the outer shell and never reaches the Studio iframe's event handlers.
   await studioFrame(page).locator("body").press("Delete");
   await page.waitForTimeout(300);
 
@@ -196,10 +194,7 @@ export async function removeElement(page: Page, elementName?: string): Promise<v
 // Set props / styles
 // ---------------------------------------------------------------------------
 
-/**
- * Set props or styles on an element via the Plasmic right-side panel.
- * Selects the element by name first if elementName is provided.
- */
+/** Set props or styles on an element via the Plasmic right-side panel. */
 export async function setElementProps(
   page: Page,
   props: PropUpdate[],
