@@ -1,12 +1,72 @@
+import { exec } from "child_process";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 import { env } from "../env.js";
+
+// ---------------------------------------------------------------------------
+// Chrome auto-launch
+// ---------------------------------------------------------------------------
+
+function launchChrome(projectId: string): void {
+  const url = `${env.studioHost}/projects/${projectId}`;
+  // macOS: open Chrome with the remote-debugging port and navigate to Studio
+  const cmd = [
+    "open", "-na", '"Google Chrome"', "--args",
+    "--remote-debugging-port=9222",
+    "--profile-directory=Default",
+    `"${url}"`,
+  ].join(" ");
+  exec(cmd, () => {}); // fire-and-forget; errors surface on the next connect attempt
+}
+
+async function pollForChrome(debugUrl: string, timeoutMs = 15_000): Promise<Browser> {
+  const deadline = Date.now() + timeoutMs;
+  let lastErr: unknown;
+  while (Date.now() < deadline) {
+    try {
+      return await chromium.connectOverCDP(debugUrl);
+    } catch (err) {
+      lastErr = err;
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+  throw new Error(
+    `Could not connect to Chrome at ${debugUrl} after ${timeoutMs / 1000}s. ` +
+    `Make sure Google Chrome is installed at /Applications/Google Chrome.app. ` +
+    `(${(lastErr as Error)?.message ?? "connection refused"})`
+  );
+}
+
+async function navigateToStudio(ctx: BrowserContext, projectId: string): Promise<Page> {
+  const url = `${env.studioHost}/projects/${projectId}`;
+  const page = await ctx.newPage();
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("iframe.studio-frame", { timeout: 60_000 });
+  return page;
+}
+
+// ---------------------------------------------------------------------------
+// Session class
+// ---------------------------------------------------------------------------
 
 export class PlasmicBrowserSession {
   private browser?: Browser;
   private page?: Page;
 
   async connect(debugUrl: string = env.chromeDebugUrl): Promise<void> {
-    this.browser = await chromium.connectOverCDP(debugUrl);
+    try {
+      this.browser = await chromium.connectOverCDP(debugUrl);
+    } catch (err) {
+      const msg = (err as Error)?.message ?? "";
+      if (msg.includes("ECONNREFUSED") || msg.includes("connect")) {
+        throw new Error(
+          `Chrome is not running with remote debugging enabled.\n` +
+          `Run this command to open Chrome with Studio:\n\n` +
+          `  open -na "Google Chrome" --args --remote-debugging-port=9222 "${env.studioHost}/projects/YOUR_PROJECT_ID"\n\n` +
+          `Or call any canvas tool and it will launch Chrome automatically if PLASMIC_PROJECT_ID is set.`
+        );
+      }
+      throw err;
+    }
   }
 
   async findStudioPage(projectId: string): Promise<Page> {
@@ -35,22 +95,55 @@ export class PlasmicBrowserSession {
 
   async close(): Promise<void> {
     // Don't close the browser — it's the user's own Chrome session.
-    // Just release our reference.
     this.browser = undefined;
     this.page = undefined;
   }
 }
 
+// ---------------------------------------------------------------------------
+// withStudioPage — auto-launches Chrome + navigates if needed
+// ---------------------------------------------------------------------------
+
 export async function withStudioPage<T>(
   projectId: string,
   fn: (page: Page) => Promise<T>
 ): Promise<T> {
-  const session = new PlasmicBrowserSession();
-  await session.connect();
-  await session.findStudioPage(projectId);
+  const debugUrl = env.chromeDebugUrl;
+  let browser: Browser;
+
+  // Step 1: Try to connect to an existing Chrome debug instance
   try {
-    return await fn(session.getPage());
+    browser = await chromium.connectOverCDP(debugUrl);
+  } catch {
+    // Chrome not running — launch it pointed at the project, then poll
+    launchChrome(projectId);
+    browser = await pollForChrome(debugUrl);
+  }
+
+  // Step 2: Find an already-open Studio tab for this project
+  let page: Page | undefined;
+  const contexts = browser.contexts();
+  for (const ctx of contexts) {
+    for (const p of ctx.pages()) {
+      if (p.url().includes(projectId) && p.url().includes("studio")) {
+        page = p;
+        await page.bringToFront();
+        break;
+      }
+    }
+    if (page) break;
+  }
+
+  // Step 3: No matching tab — open one
+  if (!page) {
+    const ctx = contexts[0] ?? await (browser as Browser & { newContext(): Promise<BrowserContext> }).newContext();
+    page = await navigateToStudio(ctx, projectId);
+  }
+
+  // Step 4: Run the operation
+  try {
+    return await fn(page);
   } finally {
-    await session.close();
+    browser.close().catch(() => {}); // release CDP reference only; doesn't close Chrome
   }
 }
