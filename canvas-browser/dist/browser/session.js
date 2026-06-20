@@ -35,10 +35,63 @@ async function pollForChrome(debugUrl, timeoutMs = 15_000) {
         `Make sure Google Chrome is installed at /Applications/Google Chrome.app. ` +
         `(${lastErr?.message ?? "connection refused"})`);
 }
+/**
+ * If a (cold-launched) Studio tab landed on the login page, authenticate the
+ * browser context by logging in via the API and injecting the session cookie.
+ * No-op unless PLASMIC_EMAIL/PLASMIC_PASSWORD are set. Returns true if it
+ * (re)authenticated.
+ */
+async function ensureAuthed(ctx, page) {
+    const onLogin = page.url().includes("/login") ||
+        (await page.title().catch(() => "")).toLowerCase().includes("sign in");
+    if (!onLogin)
+        return false;
+    if (!env.email || !env.password) {
+        throw new Error("Studio needs login and no credentials are available. Log in to " +
+            `${env.studioHost} once in the debug Chrome, or set PLASMIC_EMAIL and ` +
+            "PLASMIC_PASSWORD so canvas-browser can authenticate on a cold start.");
+    }
+    const host = env.studioHost;
+    const jar = new Map();
+    const storeCookies = (res) => {
+        const raw = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
+        for (const line of raw) {
+            const [nv] = line.split(";");
+            const eq = nv.indexOf("=");
+            if (eq > 0)
+                jar.set(nv.slice(0, eq).trim(), nv.slice(eq + 1).trim());
+        }
+    };
+    const cookieHeader = () => [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+    const api = async (method, path, body, csrf) => {
+        const headers = { "content-type": "application/json", cookie: cookieHeader() };
+        if (csrf)
+            headers["x-csrf-token"] = csrf;
+        const res = await fetch(`${host}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+        storeCookies(res);
+        return res.json().catch(() => ({}));
+    };
+    const r1 = (await api("GET", "/api/v1/auth/csrf"));
+    const r2 = (await api("POST", "/api/v1/auth/login", { email: env.email, password: env.password }, r1.csrf));
+    if (r2.status !== true) {
+        throw new Error("Studio login failed — check PLASMIC_EMAIL/PLASMIC_PASSWORD.");
+    }
+    await api("GET", "/api/v1/auth/csrf");
+    const domain = new URL(host).hostname;
+    await ctx.addCookies([...jar.entries()].map(([name, value]) => ({
+        name, value, domain, path: "/", httpOnly: false, secure: host.startsWith("https"), sameSite: "Lax",
+    })));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    return true;
+}
 async function navigateToStudio(ctx, projectId) {
     const url = `${env.studioHost}/projects/${projectId}`;
     const page = await ctx.newPage();
     await page.goto(url, { waitUntil: "domcontentloaded" });
+    // Cold profile may not be logged in — authenticate if creds are available.
+    if (await ensureAuthed(ctx, page)) {
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+    }
     await page.waitForSelector("iframe.studio-frame", { timeout: 60_000 });
     return page;
 }
@@ -106,12 +159,15 @@ export async function withStudioPage(projectId, fn) {
         launchChrome(projectId);
         browser = await pollForChrome(debugUrl);
     }
-    // Step 2: Find an already-open Studio tab for this project
+    // Step 2: Find an already-open Studio tab for this project. Exclude the login
+    // page (its URL also contains the projectId via ?continueTo=), so a cold,
+    // unauthenticated tab doesn't get mistaken for a ready Studio editor.
     let page;
     const contexts = browser.contexts();
     for (const ctx of contexts) {
         for (const p of ctx.pages()) {
-            if (p.url().includes(projectId) && p.url().includes("studio")) {
+            const url = p.url();
+            if (url.includes(projectId) && url.includes("studio") && !url.includes("/login")) {
                 page = p;
                 await page.bringToFront();
                 break;
@@ -120,10 +176,18 @@ export async function withStudioPage(projectId, fn) {
         if (page)
             break;
     }
-    // Step 3: No matching tab — open one
+    // Step 3: No matching tab — open one (navigateToStudio authenticates if the
+    // cold profile lands on the login page and creds are configured).
     if (!page) {
         const ctx = contexts[0] ?? await browser.newContext();
         page = await navigateToStudio(ctx, projectId);
+    }
+    else {
+        // A matching tab exists but may be unauthenticated/stale — ensure auth.
+        if (await ensureAuthed(page.context(), page)) {
+            await page.goto(`${env.studioHost}/projects/${projectId}`, { waitUntil: "domcontentloaded" });
+            await page.waitForSelector("iframe.studio-frame", { timeout: 60_000 });
+        }
     }
     // Step 3.5: Grant clipboard permission so studio_insert_html can write to the
     // clipboard and paste. Best-effort — not all CDP contexts support this.
