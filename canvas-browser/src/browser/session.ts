@@ -40,24 +40,20 @@ async function pollForChrome(debugUrl: string, timeoutMs = 15_000): Promise<Brow
   );
 }
 
+/** True when creds are configured for cold-start auto-authentication. */
+function hasCreds(): boolean {
+  return !!(env.email && env.password);
+}
+
 /**
- * If a (cold-launched) Studio tab landed on the login page, authenticate the
- * browser context by logging in via the API and injecting the session cookie.
- * No-op unless PLASMIC_EMAIL/PLASMIC_PASSWORD are set. Returns true if it
- * (re)authenticated.
+ * Authenticate the browser CONTEXT by logging in via the API and injecting the
+ * session cookie. No page navigation — call this BEFORE navigating to Studio so
+ * the first load is already authed (proven more reliable than a reactive reload,
+ * which can leave the cross-origin inner editor unauthenticated). No-op return
+ * false unless PLASMIC_EMAIL/PLASMIC_PASSWORD are set.
  */
-async function ensureAuthed(ctx: BrowserContext, page: Page): Promise<boolean> {
-  const onLogin =
-    page.url().includes("/login") ||
-    (await page.title().catch(() => "")).toLowerCase().includes("sign in");
-  if (!onLogin) return false;
-  if (!env.email || !env.password) {
-    throw new Error(
-      "Studio needs login and no credentials are available. Log in to " +
-        `${env.studioHost} once in the debug Chrome, or set PLASMIC_EMAIL and ` +
-        "PLASMIC_PASSWORD so canvas-browser can authenticate on a cold start."
-    );
-  }
+async function authenticateContext(ctx: BrowserContext): Promise<boolean> {
+  if (!hasCreds()) return false;
   const host = env.studioHost;
   const jar = new Map<string, string>();
   const storeCookies = (res: { headers: { getSetCookie?: () => string[] } }) => {
@@ -81,22 +77,48 @@ async function ensureAuthed(ctx: BrowserContext, page: Page): Promise<boolean> {
   if (r2.status !== true) {
     throw new Error("Studio login failed — check PLASMIC_EMAIL/PLASMIC_PASSWORD.");
   }
-  await api("GET", "/api/v1/auth/csrf");
+  await api("GET", "/api/v1/auth/csrf"); // post-login session regeneration
   const domain = new URL(host).hostname;
   await ctx.addCookies(
     [...jar.entries()].map(([name, value]) => ({
       name, value, domain, path: "/", httpOnly: false, secure: host.startsWith("https"), sameSite: "Lax" as const,
     }))
   );
+  return true;
+}
+
+/**
+ * Reactive fallback: if a tab landed on the login page, authenticate + reload.
+ * Returns true if it (re)authenticated.
+ */
+async function ensureAuthed(ctx: BrowserContext, page: Page): Promise<boolean> {
+  const onLogin =
+    page.url().includes("/login") ||
+    (await page.title().catch(() => "")).toLowerCase().includes("sign in");
+  if (!onLogin) return false;
+  if (!hasCreds()) {
+    throw new Error(
+      "Studio needs login and no credentials are available. Log in to " +
+        `${env.studioHost} once in the debug Chrome, or set PLASMIC_EMAIL and ` +
+        "PLASMIC_PASSWORD so canvas-browser can authenticate on a cold start."
+    );
+  }
+  await authenticateContext(ctx);
   await page.reload({ waitUntil: "domcontentloaded" });
   return true;
 }
 
 async function navigateToStudio(ctx: BrowserContext, projectId: string): Promise<Page> {
   const url = `${env.studioHost}/projects/${projectId}`;
+  // Proactively authenticate the context BEFORE the first navigation when creds
+  // are set — the proven path. Injecting after a login redirect (reactive) can
+  // leave the cross-origin inner editor (canvas.aihe.dev) unauthenticated.
+  if (hasCreds()) {
+    await authenticateContext(ctx);
+  }
   const page = await ctx.newPage();
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  // Cold profile may not be logged in — authenticate if creds are available.
+  // Reactive fallback in case the proactive auth didn't apply / creds absent.
   if (await ensureAuthed(ctx, page)) {
     await page.goto(url, { waitUntil: "domcontentloaded" });
   }
@@ -178,6 +200,9 @@ export async function withStudioPage<T>(
     // Chrome not running — launch it pointed at the project, then poll
     launchChrome(projectId);
     browser = await pollForChrome(debugUrl);
+    // Let a freshly-launched Chrome fully initialize before navigating —
+    // connecting/navigating too early leaves the inner editor frame unloaded.
+    await new Promise((r) => setTimeout(r, 8000));
   }
 
   // Step 2: Find an already-open Studio tab for this project. Exclude the login
