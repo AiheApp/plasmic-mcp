@@ -8,11 +8,15 @@ import { env } from "../env.js";
 
 function launchChrome(projectId: string): void {
   const url = `${env.studioHost}/projects/${projectId}`;
-  // macOS: open Chrome with the remote-debugging port and navigate to Studio
+  // macOS: open Chrome with the remote-debugging port and navigate to Studio.
+  // Use a DEDICATED user-data-dir so the debug instance starts reliably even
+  // when the user's main Chrome is already running on the default profile
+  // (Chrome ignores --remote-debugging-port if an instance with that profile
+  // is already open). This dedicated profile is the canvas-browser sandbox.
   const cmd = [
     "open", "-na", '"Google Chrome"', "--args",
     "--remote-debugging-port=9222",
-    "--profile-directory=Default",
+    "--user-data-dir=/tmp/chrome-studio-cdp",
     `"${url}"`,
   ].join(" ");
   exec(cmd, () => {}); // fire-and-forget; errors surface on the next connect attempt
