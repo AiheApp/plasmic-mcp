@@ -4,6 +4,7 @@ export const env = {
     apiToken: process.env.PLASMIC_API_TOKEN,
     projectId: process.env.PLASMIC_PROJECT_ID,
     projectToken: process.env.PLASMIC_PROJECT_TOKEN,
+    projectSecretToken: process.env.PLASMIC_PROJECT_SECRET_TOKEN,
     cmsDatabaseId: process.env.PLASMIC_CMS_DATABASE_ID,
     cmsPublicToken: process.env.PLASMIC_CMS_PUBLIC_TOKEN,
     cmsSecretToken: process.env.PLASMIC_CMS_SECRET_TOKEN,

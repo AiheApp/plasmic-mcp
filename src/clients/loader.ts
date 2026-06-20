@@ -43,6 +43,33 @@ export class PlasmicLoaderClient {
     });
     return this.request<LoaderAllData>(`/loader/code/component?${params}`);
   }
+
+  async getProjectModel(preview = false): Promise<ProjectModel> {
+    const mode = preview ? "preview" : "published";
+    return this.request<ProjectModel>(`/loader/repr-v3/${mode}/${this.projectId}`);
+  }
+}
+
+export interface ProjectModel {
+  site: {
+    __iid: number;
+    __type: "Site";
+    components?: ProjectModelComponent[];
+    styleTokens?: unknown[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface ProjectModelComponent {
+  __iid: number;
+  __type: "Component";
+  uuid?: string;
+  name?: string;
+  tplTree?: unknown;
+  params?: unknown[];
+  states?: unknown[];
+  [key: string]: unknown;
 }
 
 export interface LoaderComponent {

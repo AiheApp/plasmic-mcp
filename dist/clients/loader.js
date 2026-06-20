@@ -38,5 +38,9 @@ export class PlasmicLoaderClient {
         });
         return this.request(`/loader/code/component?${params}`);
     }
+    async getProjectModel(preview = false) {
+        const mode = preview ? "preview" : "published";
+        return this.request(`/loader/repr-v3/${mode}/${this.projectId}`);
+    }
 }
 //# sourceMappingURL=loader.js.map

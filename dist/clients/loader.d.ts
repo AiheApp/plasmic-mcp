@@ -6,6 +6,27 @@ export declare class PlasmicLoaderClient {
     private request;
     getAllData(preview?: boolean): Promise<LoaderAllData>;
     getComponentData(componentNameOrPath: string, preview?: boolean): Promise<LoaderAllData>;
+    getProjectModel(preview?: boolean): Promise<ProjectModel>;
+}
+export interface ProjectModel {
+    site: {
+        __iid: number;
+        __type: "Site";
+        components?: ProjectModelComponent[];
+        styleTokens?: unknown[];
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+export interface ProjectModelComponent {
+    __iid: number;
+    __type: "Component";
+    uuid?: string;
+    name?: string;
+    tplTree?: unknown;
+    params?: unknown[];
+    states?: unknown[];
+    [key: string]: unknown;
 }
 export interface LoaderComponent {
     id: string;

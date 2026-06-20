@@ -4,6 +4,7 @@ export declare const env: {
     apiToken: string | undefined;
     projectId: string | undefined;
     projectToken: string | undefined;
+    projectSecretToken: string | undefined;
     cmsDatabaseId: string | undefined;
     cmsPublicToken: string | undefined;
     cmsSecretToken: string | undefined;
