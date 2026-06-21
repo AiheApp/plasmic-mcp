@@ -24,8 +24,14 @@ export interface PropUpdate {
  *          └── iframe.__wab_studio-frame  →  canvas.aihe.dev/  (ACTUAL Studio SPA)
  *               └── artboard preview iframes ...
  *
- * All Studio UI elements (panels, toolbar, add-button, keyboard handlers) live in
- * the innermost frame. The outer iframe.studio-frame wrapper has no UI content.
+ * All Studio UI elements (panels, toolbar, add-button, keyboard handlers) and
+ * window.dbg.studioCtx live in the innermost frame. The outer iframe.studio-frame
+ * wrapper has no UI content.
+ *
+ * VERIFIED on Plasmic Cloud (studio.plasmic.app) 2026-06-21: the SAME two-level
+ * chain resolves there too — `studio-frame > __wab_studio-frame` reaches both the
+ * add-button and window.dbg.studioCtx.paste. So this works for self-hosted AND
+ * cloud; only PLASMIC_STUDIO_HOST needs to point at the right origin.
  */
 export declare function studioFrameOf(page: Page): FrameLocator;
 /**

@@ -9,16 +9,63 @@
  *          └── iframe.__wab_studio-frame  →  canvas.aihe.dev/  (ACTUAL Studio SPA)
  *               └── artboard preview iframes ...
  *
- * All Studio UI elements (panels, toolbar, add-button, keyboard handlers) live in
- * the innermost frame. The outer iframe.studio-frame wrapper has no UI content.
+ * All Studio UI elements (panels, toolbar, add-button, keyboard handlers) and
+ * window.dbg.studioCtx live in the innermost frame. The outer iframe.studio-frame
+ * wrapper has no UI content.
+ *
+ * VERIFIED on Plasmic Cloud (studio.plasmic.app) 2026-06-21: the SAME two-level
+ * chain resolves there too — `studio-frame > __wab_studio-frame` reaches both the
+ * add-button and window.dbg.studioCtx.paste. So this works for self-hosted AND
+ * cloud; only PLASMIC_STUDIO_HOST needs to point at the right origin.
  */
 export function studioFrameOf(page) {
     return page
         .frameLocator("iframe.studio-frame")
         .frameLocator("iframe.__wab_studio-frame");
 }
+// Candidate frame chains, primary first. The two-level chain works on both
+// self-hosted and cloud; the single-level fallbacks add resilience if a future
+// Studio/cloud DOM nests differently. resolveStudioFrame() picks the first whose
+// body actually exposes window.dbg.studioCtx and caches the choice per page.
+const STUDIO_FRAME_CHAINS = [
+    (p) => p.frameLocator("iframe.studio-frame").frameLocator("iframe.__wab_studio-frame"),
+    (p) => p.frameLocator("iframe.__wab_studio-frame"),
+    (p) => p.frameLocator("iframe.studio-frame"),
+];
+const resolvedChain = new WeakMap();
+/**
+ * Resolve the FrameLocator that actually hosts window.dbg.studioCtx, probing the
+ * known chains and caching the winner. Falls back to the primary chain (so a
+ * caller's preflight surfaces a clear, plain-English error rather than this
+ * throwing). Topology-agnostic across self-hosted and cloud.
+ */
+async function resolveStudioFrame(page) {
+    const cached = resolvedChain.get(page);
+    if (cached !== undefined)
+        return STUDIO_FRAME_CHAINS[cached](page);
+    for (let i = 0; i < STUDIO_FRAME_CHAINS.length; i++) {
+        const fl = STUDIO_FRAME_CHAINS[i](page);
+        const ok = await fl
+            .locator("body")
+            .evaluate(() => {
+            const dbg = window["dbg"];
+            return !!(dbg && dbg.studioCtx);
+        })
+            .catch(() => false);
+        if (ok) {
+            resolvedChain.set(page, i);
+            return fl;
+        }
+    }
+    return STUDIO_FRAME_CHAINS[0](page);
+}
 function studioFrame(page) {
-    return studioFrameOf(page);
+    // Use the chain resolveStudioFrame() cached for this page (populated by
+    // waitForStudio); default to the primary two-level chain otherwise. This lets
+    // every helper transparently follow the resolved frame on both self-hosted and
+    // cloud without each call site needing to be async.
+    const cached = resolvedChain.get(page);
+    return STUDIO_FRAME_CHAINS[cached ?? 0](page);
 }
 /** Wait for the Studio UI to be interactive (add-button visible in Studio SPA frame). */
 async function waitForStudio(page, timeoutMs = 60_000) {
@@ -28,6 +75,9 @@ async function waitForStudio(page, timeoutMs = 60_000) {
     await studioFrameOf(page)
         .locator('[data-test-id="add-button"]')
         .waitFor({ timeout: timeoutMs });
+    // Studio is mounted — resolve & cache the frame chain that hosts studioCtx so
+    // every subsequent studioFrame() call follows it (self-hosted or cloud).
+    await resolveStudioFrame(page);
 }
 /** Save the current state via Ctrl/Cmd+S in the Studio frame. */
 async function save(page) {
