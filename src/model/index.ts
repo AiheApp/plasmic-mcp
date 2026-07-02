@@ -5,3 +5,4 @@ export * from "./constants.js";
 export * from "./serialize.js";
 export * from "./graph.js";
 export * from "./builders.js";
+export * from "./batch.js";

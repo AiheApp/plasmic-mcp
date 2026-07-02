@@ -14,12 +14,14 @@ import { readTools } from "./tools/read.js";
 import { writeTools } from "./tools/write.js";
 import { copilotTools } from "./tools/copilot.js";
 import { modelTools } from "./tools/model.js";
+import { batchTools } from "./tools/batch.js";
 
 export const allTools: ToolDef[] = [
   ...readTools,
   ...writeTools,
   ...copilotTools,
   ...modelTools,
+  ...batchTools,
 ];
 
 function requireEnv(name: string): string {

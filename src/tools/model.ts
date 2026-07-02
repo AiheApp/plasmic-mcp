@@ -26,6 +26,7 @@ import {
   getNode,
   deref,
   isRef,
+  tokenRefValue,
   type PlasmicModel,
   type ModelNode,
   type Ref,
@@ -173,7 +174,7 @@ export const modelTools: ToolDef[] = [
         throw new PlasmicError(`ruleset not found: ${rsIid}`, undefined, undefined, "http");
       // Q3: no conclusive token-ref literal in the ground-truth script; using
       // the CSS var form. Flagged in the task .done for live E2E re-check.
-      const value = `var(--token-${tokenId})`;
+      const value = tokenRefValue(tokenId);
       updateRuleSet(model, rsIid, { [prop]: value });
       const owner = ownerComponentOf(model, rsIid);
       await saveRev(client, projectId, model, revision, owner ? [owner] : []);
