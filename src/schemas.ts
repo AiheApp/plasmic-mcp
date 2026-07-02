@@ -180,6 +180,101 @@ export const DeleteTokenInput = z
   })
   .strict();
 
+// ---- model mutation (pages / elements) ----
+const iid = (label: string) => z.string().min(1, `${label} is required`);
+
+/** TplTag.type values the model accepts (from model-schema.ts). */
+const TPL_TAG_TYPES = ["text", "image", "column", "columns", "other"] as const;
+/** A small set of safe HTML tags for new elements. */
+const ELEMENT_TAGS = ["div", "span", "p", "a", "img", "button", "section"] as const;
+
+export const ListPagesInput = z.object({ projectId }).strict();
+
+export const GetPageModelInput = z
+  .object({
+    projectId,
+    /** Optional: scope the returned graph to a single page's subtree. */
+    pageIid: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const CreatePageInput = z
+  .object({
+    projectId,
+    name: z.string().min(1, "name is required"),
+    path: z.string().min(1, "path is required"),
+    text: z.string().optional(),
+  })
+  .strict();
+
+export const UpdatePageTextInput = z
+  .object({
+    projectId,
+    /** Select the page by component iid... */
+    pageIid: z.string().min(1).optional(),
+    /** ...or by its URL path. */
+    path: z.string().min(1).optional(),
+    text: z.string(),
+    /** Optional: only update this single RawText node. */
+    textIid: z.string().min(1).optional(),
+  })
+  .strict();
+
+/** Cross-field rule enforced in the handler (MCP validates only the raw shape). */
+export const UpdatePageTextCheck = UpdatePageTextInput.refine(
+  (v) => Boolean(v.pageIid || v.path),
+  "provide either pageIid or path to select the page"
+);
+
+export const AddElementInput = z
+  .object({
+    projectId,
+    parentIid: iid("parentIid"),
+    tag: z.enum(ELEMENT_TAGS),
+    type: z.enum(TPL_TAG_TYPES),
+    baseVariantIid: z.string().min(1).optional(),
+    text: z.string().optional(),
+  })
+  .strict();
+
+export const DeleteElementInput = z
+  .object({ projectId, iid: iid("iid") })
+  .strict();
+
+export const ApplyTokenInput = z
+  .object({
+    projectId,
+    rsIid: iid("rsIid"),
+    prop: z.string().min(1, "prop is required"),
+    /** Token uuid — wired as a CSS var ref into the RuleSet value. */
+    tokenId: iid("tokenId"),
+  })
+  .strict();
+
+export const UpsertComponentInput = z
+  .object({
+    projectId,
+    name: z.string().min(1, "name is required"),
+    importPath: z.string().min(1, "importPath is required"),
+    /** Existing component iid to update; omit to create. */
+    componentIid: z.string().min(1).optional(),
+    props: z.record(z.unknown()).optional(),
+  })
+  .strict();
+
+export const DuplicatePageInput = z
+  .object({
+    projectId,
+    sourceIid: iid("sourceIid"),
+    name: z.string().min(1, "name is required"),
+    path: z.string().min(1, "path is required"),
+  })
+  .strict();
+
+export const GetElementInput = z
+  .object({ projectId, iid: iid("iid") })
+  .strict();
+
 // ---- copilot ----
 const copilotImage = z
   .object({

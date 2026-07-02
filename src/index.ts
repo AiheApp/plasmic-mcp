@@ -13,8 +13,14 @@ import type { ToolDef } from "./tools/types.js";
 import { readTools } from "./tools/read.js";
 import { writeTools } from "./tools/write.js";
 import { copilotTools } from "./tools/copilot.js";
+import { modelTools } from "./tools/model.js";
 
-export const allTools: ToolDef[] = [...readTools, ...writeTools, ...copilotTools];
+export const allTools: ToolDef[] = [
+  ...readTools,
+  ...writeTools,
+  ...copilotTools,
+  ...modelTools,
+];
 
 function requireEnv(name: string): string {
   const v = process.env[name];
