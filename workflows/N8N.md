@@ -1,26 +1,36 @@
-# n8n lane — deploy + wire-up (NOT yet deployed)
+# n8n lane — deploy + wire-up (NOT deployed from this branch)
 
 The durable automation endpoint for the design assistant:
 `POST https://automate.aihe.me/webhook/design-assist`.
 
-Everything needed is in this repo; deployment was deliberately deferred (two
-competing 86ey4ferx implementations existed at build time — deploy exactly one
-after reconciliation).
+Everything needed is in this repo; deployment from THIS branch was
+deliberately skipped: a competing 86ey4ferx implementation (agent-loop lane,
+`src/assist/` on its own branch) already deployed a `plasmic-design-assist`
+service + `DesignAssistV1` n8n workflow to that same webhook path on
+2026-07-02. Deploy exactly one implementation — reconcile first.
 
-## 1. Deploy the HTTP MCP server (Coolify, Plasmic VPS)
+## 1. Deploy the HTTP MCP server (Coolify, automate box)
 
-The Studio VPS (hetzner-plasmic-vps, Tailscale 100.122.210.19) can reach the
-Studio container directly at `http://10.0.2.2:3003` — no Cloudflare.
+**Network constraint (verified by the sibling deployment):** the n8n/automate
+box (49.13.125.34) has no Tailscale, and the Plasmic VPS's Hetzner *cloud*
+firewall blocks its non-web ports from other hosts — n8n CANNOT reach the
+Plasmic VPS. The server must therefore run NEXT TO n8n (same docker network)
+and reach the Studio via `https://studio.aihe.dev` with a browser-style
+User-Agent (Cloudflare UA-1010 rule).
 
-1. Coolify → new app from `AiheApp/plasmic-mcp`, build via the repo
-   `Dockerfile` (runs `node dist/http.js`).
-2. Env: `PLASMIC_HOST=http://10.0.2.2:3003`, `PLASMIC_EMAIL`,
-   `PLASMIC_PASSWORD`, `MCP_HTTP_TOKEN=<generate a long random secret>`,
-   `MCP_HTTP_PORT=3010`.
-3. Expose port 3010 to the internal network only (n8n reaches it over
-   Tailscale/private net — do not publish through Cloudflare).
-4. Verify: `curl http://<host>:3010/healthz` → `{"ok":true,"tools":33}`;
+1. On hetzner-aihe-automate-vps: build via the repo `Dockerfile` (runs
+   `node dist/http.js`), run joined to the `coolify` docker network with NO
+   published port — n8n reaches it at `http://<container-name>:3010`.
+2. Env: `PLASMIC_HOST=https://studio.aihe.dev`, `PLASMIC_EMAIL`,
+   `PLASMIC_PASSWORD`, `PLASMIC_USER_AGENT=Mozilla/5.0 (Macintosh)`,
+   `MCP_HTTP_TOKEN=<long random secret>`, `MCP_HTTP_PORT=3010`.
+3. Verify from inside the n8n container:
+   `curl http://<container-name>:3010/healthz` → `{"ok":true,"tools":33}`;
    an unauthenticated `POST /mcp` must return 401.
+
+n8n gotcha: the passwords-doc "N8N api token" JWT is rejected by the n8n
+public REST API — import workflows via the CLI inside the container
+(`n8n import:workflow` + `n8n update:workflow --active=true` + restart).
 
 ## 2. Import the n8n workflow
 
