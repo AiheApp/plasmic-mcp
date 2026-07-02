@@ -148,6 +148,9 @@ export function createHandler(cfg: PageApiConfig) {
     "/publish-project": async (b) => {
       const result = await callTool("plasmic_publish_project", {
         projectId: b.projectId,
+        // wab's pkg_version.tags column is NOT NULL — the Studio UI always
+        // sends tags, so an omitted array 500s the publish route.
+        tags: Array.isArray(b.tags) ? b.tags : [],
         ...(b.version ? { version: b.version } : {}),
         ...(b.description ? { description: b.description } : {}),
       });
