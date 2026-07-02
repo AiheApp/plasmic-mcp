@@ -14,18 +14,14 @@ import {
   GetElementInput,
 } from "../schemas.js";
 import {
-  parseModel,
-  buildRevisionBody,
   buildPageComponent,
   buildElement,
   buildCodeComponent,
   mergeFragment,
-  insertNode,
   deleteNode,
   updateRuleSet,
   collectDescendants,
   findNodesByType,
-  findPageByPath,
   ownerComponentOf,
   getNode,
   deref,
@@ -35,55 +31,9 @@ import {
   type Ref,
 } from "../model/index.js";
 
-const enc = encodeURIComponent;
-
-// ---- shared revision plumbing ----------------------------------------------
-
-interface ProjectRev {
-  rev: { revision: number; data: string };
-}
-
-async function fetchRev(
-  client: PlasmicClient,
-  projectId: string
-): Promise<{ revision: number; model: PlasmicModel }> {
-  const body = await client.get<ProjectRev>(`/api/v1/projects/${enc(projectId)}`);
-  if (!body?.rev || typeof body.rev.data !== "string") {
-    throw new PlasmicError(
-      `unexpected project response: missing rev.data`,
-      undefined,
-      undefined,
-      "parse"
-    );
-  }
-  return { revision: body.rev.revision, model: parseModel(body.rev.data) };
-}
-
-function saveRev(
-  client: PlasmicClient,
-  projectId: string,
-  model: PlasmicModel,
-  currentRevision: number,
-  modifiedComponentIids: string[]
-): Promise<unknown> {
-  const newRev = currentRevision + 1;
-  return client.post(
-    `/api/v1/projects/${enc(projectId)}/revisions/${newRev}`,
-    buildRevisionBody(model, currentRevision, modifiedComponentIids)
-  );
-}
+import { fetchRev, saveRev, site, resolvePage, baseVariantOf } from "./revision.js";
 
 // ---- small model readers ----------------------------------------------------
-
-function site(model: PlasmicModel): ModelNode & {
-  components: Ref[];
-  pageArenas: Ref[];
-} {
-  return getNode(model, model.root) as ModelNode & {
-    components: Ref[];
-    pageArenas: Ref[];
-  };
-}
 
 function pageSummary(model: PlasmicModel, iid: string) {
   const comp = getNode(model, iid) as ModelNode & {
@@ -92,43 +42,6 @@ function pageSummary(model: PlasmicModel, iid: string) {
   };
   const pm = deref<ModelNode & { path?: string }>(model, comp.pageMeta ?? null);
   return { iid, name: comp.name, path: pm?.path ?? null };
-}
-
-/** Resolve a page selector (pageIid or path) to a component iid. */
-function resolvePage(
-  model: PlasmicModel,
-  sel: { pageIid?: string; path?: string }
-): string {
-  if (sel.pageIid) {
-    if (!(sel.pageIid in model.map))
-      throw new PlasmicError(`page not found: ${sel.pageIid}`, undefined, undefined, "http");
-    return sel.pageIid;
-  }
-  const iid = sel.path ? findPageByPath(model, sel.path) : null;
-  if (!iid)
-    throw new PlasmicError(
-      `no page found for path ${sel.path}`,
-      undefined,
-      undefined,
-      "http"
-    );
-  return iid;
-}
-
-/** Base variant iid targeted by a parent's first vsetting (for new elements). */
-function baseVariantOf(model: PlasmicModel, parentIid: string): string {
-  const parent = getNode(model, parentIid) as ModelNode & { vsettings?: Ref[] };
-  const vsRef = parent.vsettings?.[0];
-  const vs = deref<ModelNode & { variants?: Ref[] }>(model, vsRef ?? null);
-  const varRef = vs?.variants?.[0];
-  if (!varRef || !isRef(varRef))
-    throw new PlasmicError(
-      `cannot derive a base variant from parent ${parentIid}; pass baseVariantIid`,
-      undefined,
-      undefined,
-      "http"
-    );
-  return varRef.__ref;
 }
 
 export const modelTools: ToolDef[] = [
