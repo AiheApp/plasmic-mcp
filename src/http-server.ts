@@ -242,7 +242,8 @@ if (isMain) {
   };
 
   const port = Number(process.env.PORT ?? 8765);
-  const host = requireEnv("PLASMIC_HOST");
+  // STUDIO_URL is the legacy name from the original Python service's .env.
+  const host = requireEnv("PLASMIC_HOST", "STUDIO_URL");
   const handler = createHandler({
     secret: requireEnv("ADD_PAGE_SECRET"),
     client: new PlasmicClient({
