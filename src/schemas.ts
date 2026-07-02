@@ -169,6 +169,10 @@ export const UpdateTokenInput = z
   })
   .strict();
 
+export const DeleteProjectInput = z
+  .object({ projectId })
+  .strict();
+
 export const DeleteTokenInput = z
   .object({
     projectId,

@@ -13,6 +13,7 @@ import {
   CreateTokenInput,
   UpdateTokenInput,
   DeleteTokenInput,
+  DeleteProjectInput,
 } from "../schemas.js";
 
 const enc = encodeURIComponent;
@@ -135,6 +136,14 @@ export const writeTools: ToolDef[] = [
         `/api/v1/projects/${enc(projectId)}/tokens/${enc(tokenId)}`,
         body
       ),
+  }),
+  defineTool({
+    name: "plasmic_delete_project",
+    description:
+      "Permanently delete a Plasmic project by ID. This is irreversible — all revisions, pages, and components are removed.",
+    schema: DeleteProjectInput,
+    handler: (client, { projectId }) =>
+      client.delete(`/api/v1/projects/${enc(projectId)}`),
   }),
   defineTool({
     name: "plasmic_delete_token",
