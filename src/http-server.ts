@@ -244,12 +244,33 @@ if (isMain) {
   const port = Number(process.env.PORT ?? 8765);
   // STUDIO_URL is the legacy name from the original Python service's .env.
   const host = requireEnv("PLASMIC_HOST", "STUDIO_URL");
+
+  // When talking to the wab backend directly over plain http (in-cluster,
+  // e.g. http://10.0.2.2:3004), express-session only issues its session
+  // cookie if the request looks like https — so the deploy sets
+  // PLASMIC_EXTRA_HEADERS={"x-forwarded-proto":"https"}. Injected via a
+  // fetch wrapper so every client request carries them.
+  let fetchImpl: typeof fetch | undefined;
+  const extraRaw = process.env.PLASMIC_EXTRA_HEADERS;
+  if (extraRaw) {
+    let extra: Record<string, string>;
+    try {
+      extra = JSON.parse(extraRaw);
+    } catch {
+      process.stderr.write("[plasmic-page-api] PLASMIC_EXTRA_HEADERS is not valid JSON\n");
+      process.exit(1);
+    }
+    fetchImpl = (input, init = {}) =>
+      fetch(input, { ...init, headers: { ...extra, ...(init.headers ?? {}) } });
+  }
+
   const handler = createHandler({
     secret: requireEnv("ADD_PAGE_SECRET"),
     client: new PlasmicClient({
       host,
       email: requireEnv("PLASMIC_EMAIL", "PLASMIC_STUDIO_EMAIL"),
       password: requireEnv("PLASMIC_PASSWORD", "PLASMIC_STUDIO_PASS"),
+      fetchImpl,
     }),
   });
   createServer(handler).listen(port, () => {
