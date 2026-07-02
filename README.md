@@ -103,6 +103,41 @@ The library enforces these graph invariants (each covered by a unit test):
 > derived from the OSS `model-schema.ts` (no live-proven literal like pages
 > have); treat first-time creation as best-effort pending a live E2E.
 
+## Design assist (designer request → Studio mutation)
+
+The **design-assist** layer (`src/assist/`) turns a designer's natural-language
+request into verified model mutations: it renders the prompt template at
+[`prompts/design-assistant.md`](prompts/design-assistant.md) with live project
+context (pages, the project's design tokens, registered code components), runs
+an Anthropic tool loop over a **curated, non-destructive subset** of the tools
+above (no delete_project / devflags / permissions / publish), then
+**independently verifies** — re-reads the model, diffs page summaries
+(element counts + texts), and integrity-checks the graph for dangling `__ref`s
+and broken parent links — before reporting.
+
+Three ways to run it:
+
+```bash
+# CLI (local, .env provides creds)
+npm run assist -- <projectId> "add a hero section with our primary color and a CTA"
+
+# HTTP service (the n8n webhook proxies to this)
+ASSIST_BEARER_TOKEN=… ANTHROPIC_API_KEY=… npm run assist:server
+curl -X POST :8766/design-assist -H "authorization: Bearer $TOKEN" \
+  -d '{"projectId":"…","request":"…"}'          # add "wait":false for async job mode
+
+# Live eval harness (throwaway project; ticket gate: ≥4/5 + ambiguity probe)
+npm run eval:assist
+```
+
+The report is structured JSON: `status` (`done` / `needs_clarification` /
+`partial_failure` / `failed`), designer-facing `summary`, per-call `mutations`
+log, `revisions.from→to`, measured page `diff`, `integrityIssues`, a Studio
+review link, and `undo` guidance. Env: `ASSIST_MODEL` (default
+`claude-sonnet-5`), `ASSIST_PORT` (default 8766), `ASSIST_BEARER_TOKEN`
+(required by the server), `ANTHROPIC_API_KEY`, `ASSIST_PUBLIC_STUDIO_URL`
+(designer-facing links when `PLASMIC_HOST` is an internal address).
+
 ## Deferred (not built)
 
 - **In-canvas live design** (`PLASMIC_AI_TOOLS`) — OSS-stubbed in the self-hosted
