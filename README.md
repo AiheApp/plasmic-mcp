@@ -6,9 +6,10 @@ REST API so Claude/agents can list, create, clone, update, publish, and manage
 projects, toggle devflags, manage permissions, and generate UI via Copilot —
 without driving the Studio UI.
 
-> **Scope:** this is authoring/ops automation, not in-canvas design. It cannot
-> manipulate the live element tree (`window.PLASMIC_AI_TOOLS` is OSS-stubbed in
-> the self-hosted build) and does not place components on the canvas. See
+> **Scope:** this is authoring/ops automation. It mutates the project **model**
+> (pages, elements, styles) by editing the bundle graph and saving a new
+> revision — see *Model mutation* below. It does not drive the **live in-canvas**
+> editor (`window.PLASMIC_AI_TOOLS` is OSS-stubbed in the self-hosted build). See
 > *Deferred* below.
 
 ## Why session + CSRF (not a personal API token)
@@ -61,10 +62,49 @@ Use a **dedicated service account**; rotate the password; never commit `.env`.
 - **`plasmic_generate_ui`** has a 60s timeout; 503/timeout return structured
   errors rather than hanging.
 
+### Model mutation (pages / elements)
+
+These tools read the project's model bundle (`GET /api/v1/projects/{id}` →
+`rev.data`, a JSON string), mutate the flat iid-keyed graph in memory, and save
+a new revision (`POST /api/v1/projects/{id}/revisions/{n}`). The mutation logic
+lives in a typed, pure library under [`src/model/`](src/model) — `graph.ts`
+(insert/delete/update/find), `builders.ts` (page/element/code-component node
+factories), `serialize.ts` (parse/serialize + revision body), all built from the
+live-proven node shapes.
+
+| Tool | Description |
+|---|---|
+| `plasmic_list_pages` | List page components (name, path, iid) at the current revision |
+| `plasmic_get_page_model` | Full iid graph; pass `pageIid` to scope to one page's subtree |
+| `plasmic_create_page` | Create a page (name, path, optional text); wires Site.components + Site.pageArenas |
+| `plasmic_update_page_text` | Replace RawText in a page (select by `pageIid` or `path`; optional single `textIid`) |
+| `plasmic_add_element` | Insert a TplTag (div/span/text/image/…) under a parent iid |
+| `plasmic_delete_element` | Remove a TplTag + all descendants; strips the parent ref |
+| `plasmic_apply_token` | Set a RuleSet CSS prop to a design-token ref |
+| `plasmic_upsert_component` | Create/update registered code-component metadata |
+| `plasmic_duplicate_page` | Clone a page (component + PageArena) with a new name + path |
+| `plasmic_get_element` | Read one element's styles / text / children by iid |
+
+The library enforces these graph invariants (each covered by a unit test):
+
+1. every node added to `map` has a `__ref` back-link from its parent
+2. `TplTag.parent` always points to the parent's iid
+3. every `Component` has ≥1 base `Variant`
+4. every `VariantSetting.variants` ref resolves to a valid variant iid
+5. `Site.components` + `Site.pageArenas` stay in sync when adding pages
+6. `modifiedComponentIids` includes all changed component iids
+7. `revisionNum` = `currentRevision + 1` exactly
+
+> **Note — `apply_token`:** the design-token reference is written as the CSS
+> `var(--token-<uuid>)` string form (the ground-truth material had no conclusive
+> RuleSet token-ref literal). Verify against a live save if tokens don't resolve.
+>
+> **Note — `upsert_component` (create path):** code-component node shape is
+> derived from the OSS `model-schema.ts` (no live-proven literal like pages
+> have); treat first-time creation as best-effort pending a live E2E.
+
 ## Deferred (not built)
 
-- **insert-component / in-canvas authoring** — would require serializing a
-  modified Bundle through `saveProjectRev`; high corruption risk.
 - **In-canvas live design** (`PLASMIC_AI_TOOLS`) — OSS-stubbed in the self-hosted
   build; needs the copilot tool registry + bridge implemented in core.
 - **Reverse codegen** (`POST …/code/components`) — possible phase 2.
