@@ -43,7 +43,7 @@ interface ProjectRev {
   rev: { revision: number; data: string };
 }
 
-async function fetchRev(
+export async function fetchRev(
   client: PlasmicClient,
   projectId: string
 ): Promise<{ revision: number; model: PlasmicModel }> {
@@ -85,7 +85,7 @@ function site(model: PlasmicModel): ModelNode & {
   };
 }
 
-function pageSummary(model: PlasmicModel, iid: string) {
+export function pageSummary(model: PlasmicModel, iid: string) {
   const comp = getNode(model, iid) as ModelNode & {
     name: string;
     pageMeta?: Ref | null;
@@ -95,7 +95,7 @@ function pageSummary(model: PlasmicModel, iid: string) {
 }
 
 /** Resolve a page selector (pageIid or path) to a component iid. */
-function resolvePage(
+export function resolvePage(
   model: PlasmicModel,
   sel: { pageIid?: string; path?: string }
 ): string {
