@@ -19,8 +19,7 @@
     "start:http": "node dist/http.js",
     "bench": "tsx bench/run.ts",
     "assist": "tsx src/assist/cli.ts",
-    "assist:server": "node dist/assist/server.js",
-    "eval:assist": "tsx scripts/eval-assist.ts"
+    "assist:server": "node dist/assist/server.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",

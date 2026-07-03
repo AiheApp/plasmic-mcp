@@ -134,10 +134,12 @@ request into verified model mutations: it renders the prompt template at
 [`prompts/design-assistant.md`](prompts/design-assistant.md) with live project
 context (pages, the project's design tokens, registered code components), runs
 an Anthropic tool loop over a **curated, non-destructive subset** of the tools
-above (no delete_project / devflags / permissions / publish), then
-**independently verifies** — re-reads the model, diffs page summaries
+above — reads plus the atomic batch pair only (`plasmic_plan_mutations` /
+`plasmic_apply_mutations`; no per-op mutators, no delete_project / devflags /
+permissions / publish), so every request lands as ONE revision or not at all —
+then **independently verifies**: re-reads the model, diffs page summaries
 (element counts + texts), and integrity-checks the graph for dangling `__ref`s
-and broken parent links — before reporting.
+and broken parent links before reporting.
 
 Three ways to run it:
 
@@ -150,8 +152,8 @@ ASSIST_BEARER_TOKEN=… ANTHROPIC_API_KEY=… npm run assist:server
 curl -X POST :8766/design-assist -H "authorization: Bearer $TOKEN" \
   -d '{"projectId":"…","request":"…"}'          # add "wait":false for async job mode
 
-# Live eval harness (throwaway project; ticket gate: ≥4/5 + ambiguity probe)
-npm run eval:assist
+# Live benchmark (10 cases on throwaway bench-* projects; gate: ≥8/10 incl. both refusals)
+npm run bench
 ```
 
 The report is structured JSON: `status` (`done` / `needs_clarification` /
