@@ -1,0 +1,2853 @@
+{
+  "id": "NRTqTVzBtgQhOl8f",
+  "name": "Provision Plasmic Site",
+  "active": true,
+  "isArchived": false,
+  "versionId": "a9689928-9fde-463c-9cdb-4cdfd02bea3f",
+  "activeVersionId": "a9689928-9fde-463c-9cdb-4cdfd02bea3f",
+  "triggerCount": 1,
+  "createdAt": "2026-06-30T15:23:03.017Z",
+  "updatedAt": "2026-07-02T23:07:21.577Z",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  },
+  "connections": {
+    "Provision Request": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Check Existing DNS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing DNS": {
+      "main": [
+        [
+          {
+            "node": "Check Existing App",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing App": {
+      "main": [
+        [
+          {
+            "node": "Assess State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assess State": {
+      "main": [
+        [
+          {
+            "node": "App Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App Exists?": {
+      "main": [
+        [
+          {
+            "node": "Get App Envs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Plasmic Project (ssh)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get App Envs": {
+      "main": [
+        [
+          {
+            "node": "Extract Existing Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Existing Project": {
+      "main": [
+        [
+          {
+            "node": "Resolve Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DNS Exists?": {
+      "main": [
+        [
+          {
+            "node": "Create Coolify App",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create DNS Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create DNS Record": {
+      "main": [
+        [
+          {
+            "node": "Create Coolify App",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Coolify App": {
+      "main": [
+        [
+          {
+            "node": "Set FQDN",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set FQDN": {
+      "main": [
+        [
+          {
+            "node": "Set App Envs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set App Envs": {
+      "main": [
+        [
+          {
+            "node": "Resolve Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Context": {
+      "main": [
+        [
+          {
+            "node": "Deploy App",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deploy App": {
+      "main": [
+        [
+          {
+            "node": "Extract Deployment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Deployment": {
+      "main": [
+        [
+          {
+            "node": "Wait Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Deploy": {
+      "main": [
+        [
+          {
+            "node": "Check Deployment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Deployment": {
+      "main": [
+        [
+          {
+            "node": "Eval Deployment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eval Deployment": {
+      "main": [
+        [
+          {
+            "node": "Deploy Done?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deploy Done?": {
+      "main": [
+        [
+          {
+            "node": "Check Site",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Site": {
+      "main": [
+        [
+          {
+            "node": "Eval Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eval Site": {
+      "main": [
+        [
+          {
+            "node": "Site Live?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Site Live?": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Site": {
+      "main": [
+        [
+          {
+            "node": "Check Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Rollback": {
+      "main": [
+        [
+          {
+            "node": "Del App?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Del App?": {
+      "main": [
+        [
+          {
+            "node": "Delete Coolify App",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Del DNS?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Coolify App": {
+      "main": [
+        [
+          {
+            "node": "Del DNS?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Del DNS?": {
+      "main": [
+        [
+          {
+            "node": "Delete DNS Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Del Project?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete DNS Record": {
+      "main": [
+        [
+          {
+            "node": "Del Project?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Del Project?": {
+      "main": [
+        [
+          {
+            "node": "Delete Plasmic Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Plasmic Project (ssh)": {
+      "main": [
+        [
+          {
+            "node": "Create Plasmic Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Plasmic Project": {
+      "main": [
+        [
+          {
+            "node": "Seed Home Page (ssh)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seed Home Page (ssh)": {
+      "main": [
+        [
+          {
+            "node": "Seed Home Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seed Home Page": {
+      "main": [
+        [
+          {
+            "node": "Publish Plasmic Project (ssh)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Plasmic Project (ssh)": {
+      "main": [
+        [
+          {
+            "node": "Publish Plasmic Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Plasmic Project": {
+      "main": [
+        [
+          {
+            "node": "DNS Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Rollback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Plasmic Project": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "9a212f65-16b9-46ee-925a-1b24252663d9",
+      "name": "Provision Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "provision-plasmic-site",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
+      },
+      "webhookId": "314c7cc8-015e-4e29-85e8-ef34abb74f11"
+    },
+    {
+      "id": "c9256671-d8c3-46fa-a29d-ad16497f64f1",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().json.body || {};\nconst raw = String(b.siteName || '').toLowerCase().trim();\nif (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(raw)) {\n  throw new Error('invalid siteName: must match ^[a-z0-9][a-z0-9-]{1,40}$ (got \"' + raw + '\")');\n}\nconst RESERVED = ['studio','canvas','coolify','www','api','automate','aita','mail','smtp','admin','app','dev','staging','test','ns1','ns2'];\nif (RESERVED.includes(raw)) {\n  throw new Error('reserved subdomain: ' + raw);\n}\nconst domain = String(b.domain || 'aihe.me');\nconst cfZones = {\n  'aihe.dev': 'c8b83f69a20a8092169e1c38fb2622b2',\n  'aihe.me': '978747aba768e3a3b8ab16cf0d808311',\n};\nif (!cfZones[domain]) throw new Error('invalid domain: ' + domain + ' (use aihe.dev or aihe.me)');\nconst hex = (n) => Array.from({length: n}, () => Math.floor(Math.random() * 16).toString(16)).join('');\nreturn [{ json: {\n  siteName: raw,\n  domain,\n  cfZoneId: cfZones[domain],\n  appName: 'plasmic-' + raw,\n  dnsName: raw + '.' + domain,\n  fqdn: 'https://' + raw + '.' + domain,\n  text: String(b.text || ('Welcome to ' + raw)),\n  revalidateSecret: hex(48),\n} }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "be4f7971-2c3f-49e4-a7e5-7c5aa24a7ea4",
+      "name": "Check Existing DNS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.cloudflare.com/client/v4/zones/{{ $json.cfZoneId }}/dns_records?type=A&name={{ $json.dnsName }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "f50daf08-db9a-46d5-b643-5a3bed6e36b4",
+      "name": "Check Existing App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://coolify.aihe.dev/api/v1/applications",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "155c2aad-63a5-43c6-aec6-424a31b847e2",
+      "name": "Assess State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ctx = $('Validate Input').first().json;\nconst dnsRes = $('Check Existing DNS').first().json;\nconst dnsRecords = (dnsRes && dnsRes.result) || [];\n// the HTTP node splits Coolify's JSON-array response into one item per app,\n// so collect ALL items \u2014 .first().json is just the first application object\nlet apps = [];\ntry { apps = $('Check Existing App').all().map(i => i.json); } catch (e) {}\nif (apps.length === 1) {\n  const j = apps[0];\n  if (Array.isArray(j)) apps = j;\n  else if (Array.isArray(j.data)) apps = j.data;\n}\nconst named = apps.filter(a => a && a.name === ctx.appName);\n// duplicate names can exist (e.g. an interrupted run); prefer the app that owns our fqdn\nconst existing = named.find(a => String(a.fqdn || a.domains || '').includes(ctx.dnsName)) || named[0] || null;\nreturn [{ json: {\n  ...ctx,\n  dnsExists: dnsRecords.length > 0,\n  existingDnsId: dnsRecords.length > 0 ? dnsRecords[0].id : null,\n  appExists: !!existing,\n  appUuid: existing ? existing.uuid : null,\n} }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "a76bb378-9a23-4d61-96e0-832253fb0071",
+      "name": "App Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.appExists }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "402a7ea9-5a71-4504-bdf2-ca46e9fd7350",
+      "name": "Get App Envs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        -64
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $json.appUuid }}/envs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b8a06fd9-159c-4243-83e1-86c313f0b9d2",
+      "name": "Extract Existing Project",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -64
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ctx = $('Assess State').first().json;\n// the HTTP node splits the envs array into one item per env var\nlet envs = $input.all().map(i => i.json);\nif (envs.length === 1) {\n  const j = envs[0];\n  if (Array.isArray(j)) envs = j;\n  else if (Array.isArray(j.data)) envs = j.data;\n}\nconst pid = envs.find(e => e && e.key === 'PLASMIC_PROJECT_ID');\nreturn [{ json: { ...ctx, projectId: pid ? pid.value : null, reused: true } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "9eb1e3db-6018-44fe-b515-90a31d5be66e",
+      "name": "DNS Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        192
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Assess State').first().json.dnsExists }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "adb32764-4150-43a9-81ed-d949bfd72179",
+      "name": "Create DNS Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2240,
+        288
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudflare.com/client/v4/zones/{{ $('Assess State').first().json.cfZoneId }}/dns_records",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { type: 'A', name: $('Assess State').first().json.dnsName, content: '157.90.224.29', ttl: 1, proxied: true } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "f2cef712-5adf-4e58-9e41-e8ad95c12b44",
+      "name": "Create Coolify App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2464,
+        192
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://coolify.aihe.dev/api/v1/applications/public",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { project_uuid: 's8kkk004gckck8k040kkkk8o', environment_name: 'git arena', server_uuid: 'vs080ogook8wkoo4ogggsk8k', destination_uuid: 'psow8cggos8oow00ks0048wc', git_repository: 'https://github.com/AiheApp/plasmic-nextjs-template', git_branch: 'master', name: $('Assess State').first().json.appName, ports_exposes: '3000', build_pack: 'dockerfile', instant_deploy: false } }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "4a87c780-db10-415c-925a-69b0ecec1ece",
+      "name": "Set FQDN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2688,
+        192
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $('Create Coolify App').first().json.uuid }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { domains: $('Assess State').first().json.fqdn } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "7d131eff-6c07-4c74-aad0-8f555b6d235f",
+      "name": "Set App Envs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2912,
+        192
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $('Create Coolify App').first().json.uuid }}/envs/bulk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { data: [ { key: 'PLASMIC_PROJECT_ID', value: $('Create Plasmic Project').first().json.projectId, is_preview: false }, { key: 'PLASMIC_PROJECT_TOKEN', value: $('Create Plasmic Project').first().json.projectToken, is_preview: false }, { key: 'PLASMIC_HOST', value: 'https://studio.aihe.dev', is_preview: false }, { key: 'REVALIDATE_SECRET', value: $('Assess State').first().json.revalidateSecret, is_preview: false } ] } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "08186054-71f5-4d74-a352-bc6c473ded3a",
+      "name": "Resolve Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ctx = $('Assess State').first().json;\nlet appUuid = ctx.appUuid, projectId = null, reused = false;\ntry { projectId = $('Extract Existing Project').first().json.projectId; reused = true; } catch (e) {}\nif (!reused) {\n  appUuid = $('Create Coolify App').first().json.uuid;\n  projectId = $('Create Plasmic Project').first().json.projectId;\n}\nif (!appUuid) throw new Error('resolve-context: no app uuid');\nreturn [{ json: { appUuid, projectId, reused, url: ctx.fqdn, dnsName: ctx.dnsName } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "109caa11-d259-4297-a44d-2227d80d7b80",
+      "name": "Deploy App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://coolify.aihe.dev/api/v1/deploy?uuid={{ $json.appUuid }}&force=false",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "527f9b0b-bb23-4489-8949-bca37d70a17f",
+      "name": "Extract Deployment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3584,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d = $input.first().json;\nconst deploymentUuid = d && d.deployments && d.deployments[0] ? d.deployments[0].deployment_uuid : null;\nif (!deploymentUuid) throw new Error('deploy trigger returned no deployment_uuid: ' + JSON.stringify(d).slice(0, 200));\nreturn [{ json: { deploymentUuid } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "0b5a569c-56c2-4b7f-bd46-c3c475148c89",
+      "name": "Wait Deploy",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3808,
+        96
+      ],
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "webhookId": "0903b421-9e15-49f6-909f-e5e1b184af8c"
+    },
+    {
+      "id": "2008c920-774a-4b3f-bd06-5dcfa27c7e62",
+      "name": "Check Deployment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4032,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://coolify.aihe.dev/api/v1/deployments/{{ $('Extract Deployment').first().json.deploymentUuid }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "11e535bb-e542-4fc5-bcb1-3dd866b5be78",
+      "name": "Eval Deployment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4256,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const status = String($input.first().json.status || 'unknown');\nif (['failed', 'cancelled', 'cancelled-by-user'].includes(status)) {\n  throw new Error('deployment failed with status: ' + status);\n}\nif ($runIndex > 40) throw new Error('deployment timeout after ~10 min (last status: ' + status + ')');\nreturn [{ json: { done: status === 'finished' } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "e93b991e-bce4-45f1-8e57-cc16fe57e402",
+      "name": "Deploy Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4480,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.done }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c6f05d72-ad54-46ea-91cc-43295b9275ab",
+      "name": "Check Site",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4704,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Resolve Context').first().json.url }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b3c94d9e-d07e-431d-845a-8c6adf5019cc",
+      "name": "Eval Site",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4928,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const code = Number($input.first().json.statusCode || 0);\nif ($runIndex > 20 && code !== 200) {\n  throw new Error('site not live after ~3.5 min: last HTTP status ' + code);\n}\nreturn [{ json: { ok: code === 200 } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "3be5ba37-c8de-49bc-bc4a-28e64cc4e1fd",
+      "name": "Site Live?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5152,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7050cf96-e7ff-45ca-8afb-650fd582d737",
+      "name": "Wait Site",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4928,
+        288
+      ],
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "webhookId": "5f43b58a-0107-492b-a393-1d4f02f612bc"
+    },
+    {
+      "id": "06ec17b0-f783-40e5-841f-f7653c7f3a52",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5376,
+        96
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, url: $('Resolve Context').first().json.url, appUuid: $('Resolve Context').first().json.appUuid, projectId: $('Resolve Context').first().json.projectId, deploymentUuid: $('Extract Deployment').first().json.deploymentUuid, reused: $('Resolve Context').first().json.reused } }}"
+      }
+    },
+    {
+      "id": "d6dbeb2e-756f-4724-a0ef-bb2451d1c7ce",
+      "name": "Prepare Rollback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        576
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const err = $input.first().json;\nconst stage = (typeof $prevNode !== 'undefined' && $prevNode.name) ? $prevNode.name : 'unknown';\nconst causeRaw = err && err.error;\nconst cause = (typeof causeRaw === 'string' && causeRaw)\n  || (causeRaw && (causeRaw.message || causeRaw.description))\n  || (err && err.message)\n  || JSON.stringify(err).slice(0, 300);\nconst diag = {};\nfunction grab(node, pick) {\n  const attempts = [\n    ['first()', () => pick($(node).first().json)],\n    ['first(0,0)', () => pick($(node).first(0, 0).json)],\n    ['all()', () => { const a = $(node).all(); return a.length ? pick(a[0].json) : null; }],\n  ];\n  for (const [label, fn] of attempts) {\n    try { const v = fn(); diag[node] = label; return v === undefined ? null : v; }\n    catch (e) { diag[node] = (diag[node] || '') + label + ':' + String(e.message).slice(0, 80) + '; '; }\n  }\n  return null;\n}\nconst cfZoneId = grab('Validate Input', j => j.cfZoneId);\nconst projectId = grab('Create Plasmic Project', j => j.projectId);\nconst appUuid = grab('Create Coolify App', j => j.uuid);\nconst dnsId = grab('Create DNS Record', j => (j && j.result) ? j.result.id : null);\nreturn [{ json: { stage, cause, projectId, appUuid, dnsId, cfZoneId, diag } }];"
+      }
+    },
+    {
+      "id": "8d8f0014-a7cc-483a-a073-9206cc439dcc",
+      "name": "Del App?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3584,
+        576
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ !!$json.appUuid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4769c15d-b426-4ca0-a459-92616450ef64",
+      "name": "Delete Coolify App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3808,
+        480
+      ],
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $('Prepare Rollback').first().json.appUuid }}?delete_configurations=true&delete_volumes=true&docker_cleanup=true&delete_connected_networks=false",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ae872210-dd0b-49a0-b238-fd1962cfdc8d",
+      "name": "Del DNS?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        576
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ !!$('Prepare Rollback').first().json.dnsId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "382ba73d-0abe-4f61-a119-8d45e8f39cac",
+      "name": "Delete DNS Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4256,
+        480
+      ],
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://api.cloudflare.com/client/v4/zones/{{ $('Prepare Rollback').first().json.cfZoneId }}/dns_records/{{ $('Prepare Rollback').first().json.dnsId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "87bc4982-f8c0-4422-a5c9-6bd347f15e5f",
+      "name": "Del Project?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4480,
+        576
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ !!$('Prepare Rollback').first().json.projectId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6cb18a99-729b-427a-858c-7403bd209c16",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4928,
+        576
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, stage: $('Prepare Rollback').first().json.stage, cause: $('Prepare Rollback').first().json.cause, rolledBack: { app: !!$('Prepare Rollback').first().json.appUuid, dns: !!$('Prepare Rollback').first().json.dnsId, project: !!$('Prepare Rollback').first().json.projectId } } }}",
+        "options": {
+          "responseCode": 500
+        }
+      }
+    },
+    {
+      "id": "0650d16d-5aa4-44e9-b1cd-412131459eb1",
+      "name": "Create Plasmic Project (ssh)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        192
+      ],
+      "parameters": {
+        "authentication": "privateKey",
+        "cwd": "/tmp",
+        "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ name: $('Assess State').first().json.siteName }).base64Encode() }}' | base64 -d | curl -sS -m 55 -X POST http://127.0.0.1:8765/create-project -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "9d6040f7-e91c-462a-a2af-2efaf8d37dd3",
+      "name": "Create Plasmic Project",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        64
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api create-project failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "686aa208-079c-4b1a-8792-78432f00c212",
+      "name": "Seed Home Page (ssh)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        192
+      ],
+      "parameters": {
+        "authentication": "privateKey",
+        "cwd": "/tmp",
+        "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $('Create Plasmic Project').first().json.projectId, pageName: 'Home', path: '/', text: $('Assess State').first().json.text }).base64Encode() }}' | base64 -d | curl -sS -m 55 -X POST http://127.0.0.1:8765/add-page -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5840d1a2-c658-459c-9b77-81e4e377ecb5",
+      "name": "Seed Home Page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        64
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api add-page failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "2084cd4d-cb0b-4a08-bd24-bde0b6ce34cb",
+      "name": "Publish Plasmic Project (ssh)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        192
+      ],
+      "parameters": {
+        "authentication": "privateKey",
+        "cwd": "/tmp",
+        "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $('Create Plasmic Project').first().json.projectId, description: 'provision-to-live pipeline' }).base64Encode() }}' | base64 -d | curl -sS -m 175 -X POST http://127.0.0.1:8765/publish-project -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "0832355e-5622-4245-a0ad-34e0fac039fa",
+      "name": "Publish Plasmic Project",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        64
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api publish-project failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5a9e9a80-dcac-498a-89d5-a36399f7e6b6",
+      "name": "Delete Plasmic Project",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        4704,
+        480
+      ],
+      "parameters": {
+        "authentication": "privateKey",
+        "cwd": "/tmp",
+        "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $('Prepare Rollback').first().json.projectId }).base64Encode() }}' | base64 -d | curl -sS -m 25 -X POST http://127.0.0.1:8765/delete-project -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "nodeGroups": [],
+  "activeVersion": {
+    "nodes": [
+      {
+        "id": "9a212f65-16b9-46ee-925a-1b24252663d9",
+        "name": "Provision Request",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          96
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "provision-plasmic-site",
+          "responseMode": "responseNode",
+          "authentication": "headerAuth"
+        },
+        "webhookId": "314c7cc8-015e-4e29-85e8-ef34abb74f11"
+      },
+      {
+        "id": "c9256671-d8c3-46fa-a29d-ad16497f64f1",
+        "name": "Validate Input",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          96
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const b = $input.first().json.body || {};\nconst raw = String(b.siteName || '').toLowerCase().trim();\nif (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(raw)) {\n  throw new Error('invalid siteName: must match ^[a-z0-9][a-z0-9-]{1,40}$ (got \"' + raw + '\")');\n}\nconst RESERVED = ['studio','canvas','coolify','www','api','automate','aita','mail','smtp','admin','app','dev','staging','test','ns1','ns2'];\nif (RESERVED.includes(raw)) {\n  throw new Error('reserved subdomain: ' + raw);\n}\nconst domain = String(b.domain || 'aihe.me');\nconst cfZones = {\n  'aihe.dev': 'c8b83f69a20a8092169e1c38fb2622b2',\n  'aihe.me': '978747aba768e3a3b8ab16cf0d808311',\n};\nif (!cfZones[domain]) throw new Error('invalid domain: ' + domain + ' (use aihe.dev or aihe.me)');\nconst hex = (n) => Array.from({length: n}, () => Math.floor(Math.random() * 16).toString(16)).join('');\nreturn [{ json: {\n  siteName: raw,\n  domain,\n  cfZoneId: cfZones[domain],\n  appName: 'plasmic-' + raw,\n  dnsName: raw + '.' + domain,\n  fqdn: 'https://' + raw + '.' + domain,\n  text: String(b.text || ('Welcome to ' + raw)),\n  revalidateSecret: hex(48),\n} }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "be4f7971-2c3f-49e4-a7e5-7c5aa24a7ea4",
+        "name": "Check Existing DNS",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          448,
+          96
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "=https://api.cloudflare.com/client/v4/zones/{{ $json.cfZoneId }}/dns_records?type=A&name={{ $json.dnsName }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "f50daf08-db9a-46d5-b643-5a3bed6e36b4",
+        "name": "Check Existing App",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          672,
+          96
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://coolify.aihe.dev/api/v1/applications",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "155c2aad-63a5-43c6-aec6-424a31b847e2",
+        "name": "Assess State",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          896,
+          96
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const ctx = $('Validate Input').first().json;\nconst dnsRes = $('Check Existing DNS').first().json;\nconst dnsRecords = (dnsRes && dnsRes.result) || [];\n// the HTTP node splits Coolify's JSON-array response into one item per app,\n// so collect ALL items \u2014 .first().json is just the first application object\nlet apps = [];\ntry { apps = $('Check Existing App').all().map(i => i.json); } catch (e) {}\nif (apps.length === 1) {\n  const j = apps[0];\n  if (Array.isArray(j)) apps = j;\n  else if (Array.isArray(j.data)) apps = j.data;\n}\nconst named = apps.filter(a => a && a.name === ctx.appName);\n// duplicate names can exist (e.g. an interrupted run); prefer the app that owns our fqdn\nconst existing = named.find(a => String(a.fqdn || a.domains || '').includes(ctx.dnsName)) || named[0] || null;\nreturn [{ json: {\n  ...ctx,\n  dnsExists: dnsRecords.length > 0,\n  existingDnsId: dnsRecords.length > 0 ? dnsRecords[0].id : null,\n  appExists: !!existing,\n  appUuid: existing ? existing.uuid : null,\n} }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "a76bb378-9a23-4d61-96e0-832253fb0071",
+        "name": "App Exists?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1120,
+          96
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ $json.appExists }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "402a7ea9-5a71-4504-bdf2-ca46e9fd7350",
+        "name": "Get App Envs",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1344,
+          -64
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $json.appUuid }}/envs",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "b8a06fd9-159c-4243-83e1-86c313f0b9d2",
+        "name": "Extract Existing Project",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1568,
+          -64
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const ctx = $('Assess State').first().json;\n// the HTTP node splits the envs array into one item per env var\nlet envs = $input.all().map(i => i.json);\nif (envs.length === 1) {\n  const j = envs[0];\n  if (Array.isArray(j)) envs = j;\n  else if (Array.isArray(j.data)) envs = j.data;\n}\nconst pid = envs.find(e => e && e.key === 'PLASMIC_PROJECT_ID');\nreturn [{ json: { ...ctx, projectId: pid ? pid.value : null, reused: true } }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "9eb1e3db-6018-44fe-b515-90a31d5be66e",
+        "name": "DNS Exists?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2016,
+          192
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ $('Assess State').first().json.dnsExists }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "adb32764-4150-43a9-81ed-d949bfd72179",
+        "name": "Create DNS Record",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2240,
+          288
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://api.cloudflare.com/client/v4/zones/{{ $('Assess State').first().json.cfZoneId }}/dns_records",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ { type: 'A', name: $('Assess State').first().json.dnsName, content: '157.90.224.29', ttl: 1, proxied: true } }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "f2cef712-5adf-4e58-9e41-e8ad95c12b44",
+        "name": "Create Coolify App",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2464,
+          192
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://coolify.aihe.dev/api/v1/applications/public",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ { project_uuid: 's8kkk004gckck8k040kkkk8o', environment_name: 'git arena', server_uuid: 'vs080ogook8wkoo4ogggsk8k', destination_uuid: 'psow8cggos8oow00ks0048wc', git_repository: 'https://github.com/AiheApp/plasmic-nextjs-template', git_branch: 'master', name: $('Assess State').first().json.appName, ports_exposes: '3000', build_pack: 'dockerfile', instant_deploy: false } }}",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "4a87c780-db10-415c-925a-69b0ecec1ece",
+        "name": "Set FQDN",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2688,
+          192
+        ],
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $('Create Coolify App').first().json.uuid }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ { domains: $('Assess State').first().json.fqdn } }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "7d131eff-6c07-4c74-aad0-8f555b6d235f",
+        "name": "Set App Envs",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2912,
+          192
+        ],
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $('Create Coolify App').first().json.uuid }}/envs/bulk",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ { data: [ { key: 'PLASMIC_PROJECT_ID', value: $('Create Plasmic Project').first().json.projectId, is_preview: false }, { key: 'PLASMIC_PROJECT_TOKEN', value: $('Create Plasmic Project').first().json.projectToken, is_preview: false }, { key: 'PLASMIC_HOST', value: 'https://studio.aihe.dev', is_preview: false }, { key: 'REVALIDATE_SECRET', value: $('Assess State').first().json.revalidateSecret, is_preview: false } ] } }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "08186054-71f5-4d74-a352-bc6c473ded3a",
+        "name": "Resolve Context",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3136,
+          96
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const ctx = $('Assess State').first().json;\nlet appUuid = ctx.appUuid, projectId = null, reused = false;\ntry { projectId = $('Extract Existing Project').first().json.projectId; reused = true; } catch (e) {}\nif (!reused) {\n  appUuid = $('Create Coolify App').first().json.uuid;\n  projectId = $('Create Plasmic Project').first().json.projectId;\n}\nif (!appUuid) throw new Error('resolve-context: no app uuid');\nreturn [{ json: { appUuid, projectId, reused, url: ctx.fqdn, dnsName: ctx.dnsName } }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "109caa11-d259-4297-a44d-2227d80d7b80",
+        "name": "Deploy App",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          3360,
+          96
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "=https://coolify.aihe.dev/api/v1/deploy?uuid={{ $json.appUuid }}&force=false",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "527f9b0b-bb23-4489-8949-bca37d70a17f",
+        "name": "Extract Deployment",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3584,
+          96
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const d = $input.first().json;\nconst deploymentUuid = d && d.deployments && d.deployments[0] ? d.deployments[0].deployment_uuid : null;\nif (!deploymentUuid) throw new Error('deploy trigger returned no deployment_uuid: ' + JSON.stringify(d).slice(0, 200));\nreturn [{ json: { deploymentUuid } }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "0b5a569c-56c2-4b7f-bd46-c3c475148c89",
+        "name": "Wait Deploy",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          3808,
+          96
+        ],
+        "parameters": {
+          "amount": 15,
+          "unit": "seconds"
+        },
+        "webhookId": "0903b421-9e15-49f6-909f-e5e1b184af8c"
+      },
+      {
+        "id": "2008c920-774a-4b3f-bd06-5dcfa27c7e62",
+        "name": "Check Deployment",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          4032,
+          96
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "=https://coolify.aihe.dev/api/v1/deployments/{{ $('Extract Deployment').first().json.deploymentUuid }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "11e535bb-e542-4fc5-bcb1-3dd866b5be78",
+        "name": "Eval Deployment",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4256,
+          96
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const status = String($input.first().json.status || 'unknown');\nif (['failed', 'cancelled', 'cancelled-by-user'].includes(status)) {\n  throw new Error('deployment failed with status: ' + status);\n}\nif ($runIndex > 40) throw new Error('deployment timeout after ~10 min (last status: ' + status + ')');\nreturn [{ json: { done: status === 'finished' } }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "e93b991e-bce4-45f1-8e57-cc16fe57e402",
+        "name": "Deploy Done?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          4480,
+          96
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ $json.done }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "c6f05d72-ad54-46ea-91cc-43295b9275ab",
+        "name": "Check Site",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          4704,
+          96
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $('Resolve Context').first().json.url }}",
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "neverError": true,
+                "fullResponse": true
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "b3c94d9e-d07e-431d-845a-8c6adf5019cc",
+        "name": "Eval Site",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4928,
+          96
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const code = Number($input.first().json.statusCode || 0);\nif ($runIndex > 20 && code !== 200) {\n  throw new Error('site not live after ~3.5 min: last HTTP status ' + code);\n}\nreturn [{ json: { ok: code === 200 } }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "3be5ba37-c8de-49bc-bc4a-28e64cc4e1fd",
+        "name": "Site Live?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          5152,
+          96
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ $json.ok }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "7050cf96-e7ff-45ca-8afb-650fd582d737",
+        "name": "Wait Site",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          4928,
+          288
+        ],
+        "parameters": {
+          "amount": 10,
+          "unit": "seconds"
+        },
+        "webhookId": "5f43b58a-0107-492b-a393-1d4f02f612bc"
+      },
+      {
+        "id": "06ec17b0-f783-40e5-841f-f7653c7f3a52",
+        "name": "Respond OK",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          5376,
+          96
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok: true, url: $('Resolve Context').first().json.url, appUuid: $('Resolve Context').first().json.appUuid, projectId: $('Resolve Context').first().json.projectId, deploymentUuid: $('Extract Deployment').first().json.deploymentUuid, reused: $('Resolve Context').first().json.reused } }}"
+        }
+      },
+      {
+        "id": "d6dbeb2e-756f-4724-a0ef-bb2451d1c7ce",
+        "name": "Prepare Rollback",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3360,
+          576
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const err = $input.first().json;\nconst stage = (typeof $prevNode !== 'undefined' && $prevNode.name) ? $prevNode.name : 'unknown';\nconst causeRaw = err && err.error;\nconst cause = (typeof causeRaw === 'string' && causeRaw)\n  || (causeRaw && (causeRaw.message || causeRaw.description))\n  || (err && err.message)\n  || JSON.stringify(err).slice(0, 300);\nconst diag = {};\nfunction grab(node, pick) {\n  const attempts = [\n    ['first()', () => pick($(node).first().json)],\n    ['first(0,0)', () => pick($(node).first(0, 0).json)],\n    ['all()', () => { const a = $(node).all(); return a.length ? pick(a[0].json) : null; }],\n  ];\n  for (const [label, fn] of attempts) {\n    try { const v = fn(); diag[node] = label; return v === undefined ? null : v; }\n    catch (e) { diag[node] = (diag[node] || '') + label + ':' + String(e.message).slice(0, 80) + '; '; }\n  }\n  return null;\n}\nconst cfZoneId = grab('Validate Input', j => j.cfZoneId);\nconst projectId = grab('Create Plasmic Project', j => j.projectId);\nconst appUuid = grab('Create Coolify App', j => j.uuid);\nconst dnsId = grab('Create DNS Record', j => (j && j.result) ? j.result.id : null);\nreturn [{ json: { stage, cause, projectId, appUuid, dnsId, cfZoneId, diag } }];"
+        }
+      },
+      {
+        "id": "8d8f0014-a7cc-483a-a073-9206cc439dcc",
+        "name": "Del App?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          3584,
+          576
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ !!$json.appUuid }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "4769c15d-b426-4ca0-a459-92616450ef64",
+        "name": "Delete Coolify App",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          3808,
+          480
+        ],
+        "parameters": {
+          "method": "DELETE",
+          "url": "=https://coolify.aihe.dev/api/v1/applications/{{ $('Prepare Rollback').first().json.appUuid }}?delete_configurations=true&delete_volumes=true&docker_cleanup=true&delete_connected_networks=false",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "ae872210-dd0b-49a0-b238-fd1962cfdc8d",
+        "name": "Del DNS?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          4032,
+          576
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ !!$('Prepare Rollback').first().json.dnsId }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "382ba73d-0abe-4f61-a119-8d45e8f39cac",
+        "name": "Delete DNS Record",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          4256,
+          480
+        ],
+        "parameters": {
+          "method": "DELETE",
+          "url": "=https://api.cloudflare.com/client/v4/zones/{{ $('Prepare Rollback').first().json.cfZoneId }}/dns_records/{{ $('Prepare Rollback').first().json.dnsId }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "87bc4982-f8c0-4422-a5c9-6bd347f15e5f",
+        "name": "Del Project?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          4480,
+          576
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ !!$('Prepare Rollback').first().json.projectId }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "6cb18a99-729b-427a-858c-7403bd209c16",
+        "name": "Respond Error",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          4928,
+          576
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok: false, stage: $('Prepare Rollback').first().json.stage, cause: $('Prepare Rollback').first().json.cause, rolledBack: { app: !!$('Prepare Rollback').first().json.appUuid, dns: !!$('Prepare Rollback').first().json.dnsId, project: !!$('Prepare Rollback').first().json.projectId } } }}",
+          "options": {
+            "responseCode": 500
+          }
+        }
+      },
+      {
+        "id": "0650d16d-5aa4-44e9-b1cd-412131459eb1",
+        "name": "Create Plasmic Project (ssh)",
+        "type": "n8n-nodes-base.ssh",
+        "typeVersion": 1,
+        "position": [
+          1344,
+          192
+        ],
+        "parameters": {
+          "authentication": "privateKey",
+          "cwd": "/tmp",
+          "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ name: $('Assess State').first().json.siteName }).base64Encode() }}' | base64 -d | curl -sS -m 55 -X POST http://127.0.0.1:8765/create-project -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "9d6040f7-e91c-462a-a2af-2efaf8d37dd3",
+        "name": "Create Plasmic Project",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1456,
+          64
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api create-project failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "686aa208-079c-4b1a-8792-78432f00c212",
+        "name": "Seed Home Page (ssh)",
+        "type": "n8n-nodes-base.ssh",
+        "typeVersion": 1,
+        "position": [
+          1568,
+          192
+        ],
+        "parameters": {
+          "authentication": "privateKey",
+          "cwd": "/tmp",
+          "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $('Create Plasmic Project').first().json.projectId, pageName: 'Home', path: '/', text: $('Assess State').first().json.text }).base64Encode() }}' | base64 -d | curl -sS -m 55 -X POST http://127.0.0.1:8765/add-page -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "5840d1a2-c658-459c-9b77-81e4e377ecb5",
+        "name": "Seed Home Page",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1680,
+          64
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api add-page failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "2084cd4d-cb0b-4a08-bd24-bde0b6ce34cb",
+        "name": "Publish Plasmic Project (ssh)",
+        "type": "n8n-nodes-base.ssh",
+        "typeVersion": 1,
+        "position": [
+          1792,
+          192
+        ],
+        "parameters": {
+          "authentication": "privateKey",
+          "cwd": "/tmp",
+          "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $('Create Plasmic Project').first().json.projectId, description: 'provision-to-live pipeline' }).base64Encode() }}' | base64 -d | curl -sS -m 175 -X POST http://127.0.0.1:8765/publish-project -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "0832355e-5622-4245-a0ad-34e0fac039fa",
+        "name": "Publish Plasmic Project",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1904,
+          64
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api publish-project failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "5a9e9a80-dcac-498a-89d5-a36399f7e6b6",
+        "name": "Delete Plasmic Project",
+        "type": "n8n-nodes-base.ssh",
+        "typeVersion": 1,
+        "position": [
+          4704,
+          480
+        ],
+        "parameters": {
+          "authentication": "privateKey",
+          "cwd": "/tmp",
+          "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $('Prepare Rollback').first().json.projectId }).base64Encode() }}' | base64 -d | curl -sS -m 25 -X POST http://127.0.0.1:8765/delete-project -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+        },
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "Provision Request": {
+        "main": [
+          [
+            {
+              "node": "Validate Input",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Input": {
+        "main": [
+          [
+            {
+              "node": "Check Existing DNS",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Existing DNS": {
+        "main": [
+          [
+            {
+              "node": "Check Existing App",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Existing App": {
+        "main": [
+          [
+            {
+              "node": "Assess State",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Assess State": {
+        "main": [
+          [
+            {
+              "node": "App Exists?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "App Exists?": {
+        "main": [
+          [
+            {
+              "node": "Get App Envs",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Create Plasmic Project (ssh)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get App Envs": {
+        "main": [
+          [
+            {
+              "node": "Extract Existing Project",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Existing Project": {
+        "main": [
+          [
+            {
+              "node": "Resolve Context",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "DNS Exists?": {
+        "main": [
+          [
+            {
+              "node": "Create Coolify App",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Create DNS Record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create DNS Record": {
+        "main": [
+          [
+            {
+              "node": "Create Coolify App",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Coolify App": {
+        "main": [
+          [
+            {
+              "node": "Set FQDN",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set FQDN": {
+        "main": [
+          [
+            {
+              "node": "Set App Envs",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set App Envs": {
+        "main": [
+          [
+            {
+              "node": "Resolve Context",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Resolve Context": {
+        "main": [
+          [
+            {
+              "node": "Deploy App",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deploy App": {
+        "main": [
+          [
+            {
+              "node": "Extract Deployment",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Deployment": {
+        "main": [
+          [
+            {
+              "node": "Wait Deploy",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait Deploy": {
+        "main": [
+          [
+            {
+              "node": "Check Deployment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Deployment": {
+        "main": [
+          [
+            {
+              "node": "Eval Deployment",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Eval Deployment": {
+        "main": [
+          [
+            {
+              "node": "Deploy Done?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deploy Done?": {
+        "main": [
+          [
+            {
+              "node": "Check Site",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Wait Deploy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Site": {
+        "main": [
+          [
+            {
+              "node": "Eval Site",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Eval Site": {
+        "main": [
+          [
+            {
+              "node": "Site Live?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Site Live?": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Wait Site",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait Site": {
+        "main": [
+          [
+            {
+              "node": "Check Site",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Rollback": {
+        "main": [
+          [
+            {
+              "node": "Del App?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Del App?": {
+        "main": [
+          [
+            {
+              "node": "Delete Coolify App",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Del DNS?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Coolify App": {
+        "main": [
+          [
+            {
+              "node": "Del DNS?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Del DNS?": {
+        "main": [
+          [
+            {
+              "node": "Delete DNS Record",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Del Project?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete DNS Record": {
+        "main": [
+          [
+            {
+              "node": "Del Project?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Del Project?": {
+        "main": [
+          [
+            {
+              "node": "Delete Plasmic Project",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Plasmic Project (ssh)": {
+        "main": [
+          [
+            {
+              "node": "Create Plasmic Project",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Plasmic Project": {
+        "main": [
+          [
+            {
+              "node": "Seed Home Page (ssh)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Seed Home Page (ssh)": {
+        "main": [
+          [
+            {
+              "node": "Seed Home Page",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Seed Home Page": {
+        "main": [
+          [
+            {
+              "node": "Publish Plasmic Project (ssh)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Publish Plasmic Project (ssh)": {
+        "main": [
+          [
+            {
+              "node": "Publish Plasmic Project",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Publish Plasmic Project": {
+        "main": [
+          [
+            {
+              "node": "DNS Exists?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare Rollback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Plasmic Project": {
+        "main": [
+          [
+            {
+              "node": "Respond Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": []
+  },
+  "tags": [],
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "parentFolderId": null,
+  "description": "Provisions a Plasmic Next.js site on aihe.dev or aihe.me (optional domain param, defaults to aihe.dev). Creates CF DNS A record, Coolify app, sets FQDN + env vars, deploys.",
+  "scopes": [
+    "execution:reveal",
+    "workflow:create",
+    "workflow:delete",
+    "workflow:disableRedaction",
+    "workflow:enableRedaction",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:export",
+    "workflow:import",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:unshare",
+    "workflow:update"
+  ],
+  "canExecute": true
+}
