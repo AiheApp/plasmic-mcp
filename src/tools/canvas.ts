@@ -28,6 +28,7 @@ import {
   pasteHtml,
   createComponentViaAiTools,
   aiToolsAvailable,
+  detectBlockingModal,
   flushSave,
   listPagesWithFrames,
   type PageTarget,
@@ -471,9 +472,9 @@ export const canvasTools: ToolDef[] = [
     name: "plasmic_canvas_doctor",
     description:
       "Read-only diagnostic for the canvas insert path: REST auth + revision, token count, " +
-      "Studio reachability, allowHtmlPaste devflag, PLASMIC_AI_TOOLS presence, and per-page " +
-      "arena frame counts (pages with 0 frames cannot receive pastes). Run this first when " +
-      "plasmic_insert_html/plasmic_insert_template fail.",
+      "Studio reachability, blocking modals (e.g. unregistered code components), allowHtmlPaste " +
+      "devflag, PLASMIC_AI_TOOLS presence, and per-page arena frame counts (pages with 0 frames " +
+      "cannot receive pastes). Run this first when plasmic_insert_html/plasmic_insert_template fail.",
     schema: CanvasDoctorInput,
     handler: async (client, args) => {
       const problems: string[] = [];
@@ -509,6 +510,17 @@ export const canvasTools: ToolDef[] = [
       try {
         session = await getDriver(client).openStudio(args.projectId);
         report.studioReachable = true;
+
+        const modal = await detectBlockingModal(session.studioFrame);
+        report.blockingModal = modal;
+        if (modal) {
+          problems.push(
+            `BLOCKING_MODAL: Studio is blocked by a modal that requires a manual decision: ` +
+              `"${modal.slice(0, 200)}" — inserts will fail until it is resolved in Studio ` +
+              `(often an unregistered code component; see docs/canvas-runbook.md#blocking_modal)`
+          );
+        }
+
         report.allowHtmlPaste = await htmlPasteAllowed(session.studioFrame);
         report.aiToolsAvailable = await aiToolsAvailable(session.page);
         if (!report.allowHtmlPaste && !report.aiToolsAvailable) {

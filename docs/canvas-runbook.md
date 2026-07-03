@@ -36,7 +36,7 @@ page** from the HTML; the same REST verification applies.
 | --- | --- | --- |
 | `BROWSER_UNAVAILABLE` | playwright not installed / chromium missing | `npm i playwright && npx playwright install chromium`. The Docker image is REST-only by design; run canvas ops from a host with a browser. |
 | `STUDIO_UNREACHABLE` / `CANVAS_NOT_READY` | Studio didn't load or `dbg.studioCtx.site` never appeared | Check host is up (Cloudflare 524 = origin slow; see deploy topology memory), `PLASMIC_USER_AGENT` set (WAF blocks the default headless UA), auth valid. Diagnostics include a per-frame probe of what was seen. |
-| `BLOCKING_MODAL` | Studio load is halted by a modal that demands a human decision — typically **"Code component no longer registered"** (project uses a host component that the host app no longer registers) | Open the project in Studio manually and choose *Replace* / *Delete all existing uses*, or re-register the component on the host app. These modals cannot be dismissed programmatically (the X re-prompts). Diagnostics carry the modal text. |
+| `BLOCKING_MODAL` | Studio load is halted by a modal that demands a human decision — typically **"Code component no longer registered"** (project uses a host component that the host app no longer registers) | Open the project in Studio manually and choose *Replace* / *Delete all existing uses*, or re-register the component on the host app. These modals cannot be dismissed programmatically (the X re-prompts). Diagnostics carry the modal text; `plasmic_canvas_doctor` reports it in `blockingModal`. |
 | `CANVAS_NO_FRAME` | Target page has an empty ArenaFrameGrid, so it can't receive a paste. Pages created via the REST model layer (`plasmic_create_page`) have this defect | Target a Studio-created page, or omit `page` and let the tool create one (it uses Studio's own page-creation flow). |
 | `PAGE_NOT_FOUND` | `page` selector matched no page uuid/name/path | Diagnostics list the project's pages. |
 | `HTML_PASTE_DISABLED` | `allowHtmlPaste` devflag is off for this account AND `PLASMIC_AI_TOOLS` is absent | Self-hosted: the flag auto-enables for **admin-team** emails (`adminTeamEmails`/`adminTeamDomains` devflags — see the privilege-model memory); add the MCP account or set the flag instance-wide via `plasmic_set_devflags {key: "allowHtmlPaste", value: true, confirm: true}`. Cloud: use a Studio tab where `PLASMIC_AI_TOOLS` exists. |
@@ -83,6 +83,13 @@ page** from the HTML; the same REST verification applies.
 - **Copilot HTML**: output from `plasmic_generate_ui` should be inserted with
   `plasmic_insert_html` (which trims/validates), never hand-pasted into the
   canvas via the browser clipboard.
+- **First Studio open can commit an autosave.** When host-app token
+  registration has drifted, the first browser open of a project commits a
+  one-time "Registered tokens updated" save — the revision advances (and ~100
+  System tokens materialize) even for a read-only doctor run or a failed
+  insert. A revision bump alone therefore never proves content landed, which
+  is why verification also diffs the page subtree; and the doctor's
+  0-design-tokens warning only fires on projects Studio has never opened.
 
 ## Design tokens in HTML
 

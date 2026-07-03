@@ -61,6 +61,25 @@ export async function visibleModalText(frame: Frame): Promise<string | null> {
   }
 }
 
+/**
+ * Poll briefly for a blocking modal. The doctor path never activates an arena
+ * (whose readiness timeout is what normally flushes the modal out), so it
+ * checks explicitly right after Studio load; the short window covers modals
+ * that render a beat after studioCtx.site is ready.
+ */
+export async function detectBlockingModal(
+  frame: Frame,
+  timeoutMs = 3000
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const modal = await visibleModalText(frame);
+    if (modal) return modal;
+    if (Date.now() >= deadline) return null;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 /** Wrap a readiness timeout in BLOCKING_MODAL if a modal is what's stalling Studio. */
 async function throwReadinessError(
   frame: Frame,
