@@ -1,0 +1,16 @@
+# plasmic-page-api on hetzner-plasmic-vps (/opt/plasmic-page-api).
+# The service must share a network with the Plasmic Studio stack so that
+# PLASMIC_HOST (e.g. http://10.0.2.2:3003) is reachable — adjust `networks`
+# on the host if the Studio stack's network name differs.
+services:
+  plasmic-page-api:
+    build:
+      context: .
+      dockerfile: deploy/page-api.Dockerfile
+    container_name: plasmic-page-api
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    env_file: .env
+    environment:
+      - PORT=8765

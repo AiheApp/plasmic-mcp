@@ -1,0 +1,238 @@
+{
+  "id": "Q5T9y0cjZyNmmjxK",
+  "name": "Add Plasmic Page",
+  "active": true,
+  "isArchived": false,
+  "versionId": "c6bcc67e-264f-42a0-b7d0-112fec72ee94",
+  "activeVersionId": "c6bcc67e-264f-42a0-b7d0-112fec72ee94",
+  "triggerCount": 1,
+  "createdAt": "2026-07-01T11:16:33.366Z",
+  "updatedAt": "2026-07-02T22:48:07.049Z",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Add Page Request": {
+      "main": [
+        [
+          {
+            "node": "Call Page API (ssh)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Page API (ssh)": {
+      "main": [
+        [
+          {
+            "node": "Call Page API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Page API": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "631f385a-f538-40b5-afd5-f2c23329378d",
+      "name": "Add Page Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "add-plasmic-page",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "364dad37-e046-433b-af06-f33ec6a5e9a0"
+    },
+    {
+      "id": "b050c6e9-f895-4870-9777-d8bff9f5f3a8",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    },
+    {
+      "id": "61d0b04e-4b8e-4135-b831-8ca751697aeb",
+      "name": "Call Page API (ssh)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "authentication": "privateKey",
+        "cwd": "/tmp",
+        "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $json.body.projectId, pageName: $json.body.pageName, path: $json.body.path, text: $json.body.text }).base64Encode() }}' | base64 -d | curl -sS -m 55 -X POST http://127.0.0.1:8765/add-page -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+      }
+    },
+    {
+      "id": "5948dede-0640-4e02-8732-23a54da11a07",
+      "name": "Call Page API",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api add-page failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+      }
+    }
+  ],
+  "nodeGroups": [],
+  "activeVersion": {
+    "nodes": [
+      {
+        "id": "631f385a-f538-40b5-afd5-f2c23329378d",
+        "name": "Add Page Request",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "add-plasmic-page",
+          "responseMode": "responseNode"
+        },
+        "webhookId": "364dad37-e046-433b-af06-f33ec6a5e9a0"
+      },
+      {
+        "id": "b050c6e9-f895-4870-9777-d8bff9f5f3a8",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          448,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}"
+        }
+      },
+      {
+        "id": "61d0b04e-4b8e-4135-b831-8ca751697aeb",
+        "name": "Call Page API (ssh)",
+        "type": "n8n-nodes-base.ssh",
+        "typeVersion": 1,
+        "position": [
+          448,
+          0
+        ],
+        "parameters": {
+          "authentication": "privateKey",
+          "cwd": "/tmp",
+          "command": "=set -eu; S=$(grep -m1 '^ADD_PAGE_SECRET=' /opt/plasmic-page-api/.env | cut -d= -f2-); echo '{{ JSON.stringify({ projectId: $json.body.projectId, pageName: $json.body.pageName, path: $json.body.path, text: $json.body.text }).base64Encode() }}' | base64 -d | curl -sS -m 55 -X POST http://127.0.0.1:8765/add-page -H \"Authorization: Bearer $S\" -H 'content-type: application/json' --data-binary @- -w '\\n%{http_code}'"
+        }
+      },
+      {
+        "id": "5948dede-0640-4e02-8732-23a54da11a07",
+        "name": "Call Page API",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          0
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const r = $input.first().json;\nconst raw = String(r.stdout ?? '').trim();\nconst nl = raw.lastIndexOf('\\n');\nconst status = Number(nl === -1 ? raw : raw.slice(nl + 1));\nconst text = nl === -1 ? '' : raw.slice(0, nl).trim();\nlet body = null;\ntry { body = JSON.parse(text); } catch (e) {}\nif (!Number.isFinite(status) || status >= 400 || !body || body.ok !== true) {\n  const cause = (body && (body.error || body.message)) || text.slice(0, 300) || String(r.stderr || '').slice(0, 200) || 'no response';\n  throw new Error('page-api add-page failed (HTTP ' + status + '): ' + cause);\n}\nreturn [{ json: body }];"
+        }
+      }
+    ],
+    "connections": {
+      "Add Page Request": {
+        "main": [
+          [
+            {
+              "node": "Call Page API (ssh)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Page API (ssh)": {
+        "main": [
+          [
+            {
+              "node": "Call Page API",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Page API": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": []
+  },
+  "tags": [],
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "parentFolderId": null,
+  "description": "POST /webhook/add-plasmic-page with {projectId, pageName, path, text} \u2014 adds a text page to a Plasmic project via Studio revision API. Reads Studio credentials from n8n Variables.",
+  "scopes": [
+    "execution:reveal",
+    "workflow:create",
+    "workflow:delete",
+    "workflow:disableRedaction",
+    "workflow:enableRedaction",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:export",
+    "workflow:import",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:unshare",
+    "workflow:update"
+  ],
+  "canExecute": true
+}

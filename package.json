@@ -17,6 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start:http": "node dist/http.js",
+    "start:page-api": "node dist/http-server.js",
     "bench": "tsx bench/run.ts",
     "assist": "tsx src/assist/cli.ts",
     "assist:server": "node dist/assist/server.js",
