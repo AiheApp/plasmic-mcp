@@ -85,6 +85,28 @@ live-proven node shapes.
 | `plasmic_duplicate_page` | Clone a page (component + PageArena) with a new name + path |
 | `plasmic_get_element` | Read one element's styles / text / children by iid |
 
+### Atomic batch mutation (preview → confirm → apply)
+
+The design-assistant workflow (ClickUp 86ey4ferx) rides on two batch tools
+backed by [`src/model/batch.ts`](src/model/batch.ts):
+
+| Tool | Description |
+|---|---|
+| `plasmic_plan_mutations` | Validate + trial-execute an ops batch WITHOUT saving; returns `baseRevision` + a human-readable preview diff, or per-op errors |
+| `plasmic_apply_mutations` | Re-validate against the fresh head and apply the whole batch in ONE revision save; `expectedRevision` mismatch aborts with `REVISION_CONFLICT` |
+
+Ops (`create_page`, `duplicate_page`, `add_element`, `set_text`,
+`delete_element`, `apply_token`, `set_styles`) chain through `$id`
+placeholders (`$hero.rootTpl`, `$cta.rs`, …). A batch is atomic: any failing
+op means nothing is saved. Batch validation is intentionally stricter than
+the single-op tools (e.g. `create_page` rejects an already-taken path with
+`PATH_TAKEN`). The Studio server additionally rejects stale `revisionNum`
+saves with HTTP 412 (verified live), so concurrent Studio edits cannot be
+clobbered.
+
+The assistant prompt, skill, and runbook live in [`assistant/`](assistant);
+the live benchmark harness in [`bench/`](bench).
+
 The library enforces these graph invariants (each covered by a unit test):
 
 1. every node added to `map` has a `__ref` back-link from its parent
@@ -96,8 +118,10 @@ The library enforces these graph invariants (each covered by a unit test):
 7. `revisionNum` = `currentRevision + 1` exactly
 
 > **Note — `apply_token`:** the design-token reference is written as the CSS
-> `var(--token-<uuid>)` string form (the ground-truth material had no conclusive
-> RuleSet token-ref literal). Verify against a live save if tokens don't resolve.
+> `var(--token-<uuid>)` string form (shared helper `tokenRefValue`). Verified
+> live (2026-07-02): the value round-trips through a revision save for
+> project-local tokens. Canvas rendering of REGISTERED (host-app) tokens
+> depends on the registration CSS being loaded.
 >
 > **Note — `upsert_component` (create path):** code-component node shape is
 > derived from the OSS `model-schema.ts` (no live-proven literal like pages

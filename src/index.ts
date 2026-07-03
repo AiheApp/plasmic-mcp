@@ -2,6 +2,7 @@
 import { config as loadEnv } from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { realpathSync } from "node:fs";
 // Load .env from the package root (dist/.. ) so registration works regardless of
 // the cwd Claude spawns us from. Real process env still wins over .env.
 loadEnv({ path: join(dirname(fileURLToPath(import.meta.url)), "..", ".env") });
@@ -14,12 +15,14 @@ import { readTools } from "./tools/read.js";
 import { writeTools } from "./tools/write.js";
 import { copilotTools } from "./tools/copilot.js";
 import { modelTools } from "./tools/model.js";
+import { batchTools } from "./tools/batch.js";
 
 export const allTools: ToolDef[] = [
   ...readTools,
   ...writeTools,
   ...copilotTools,
   ...modelTools,
+  ...batchTools,
 ];
 
 function requireEnv(name: string): string {
@@ -33,7 +36,7 @@ function requireEnv(name: string): string {
   return v;
 }
 
-function buildServer(client: PlasmicClient): McpServer {
+export function buildServer(client: PlasmicClient): McpServer {
   const server = new McpServer({ name: "plasmic-mcp", version: "0.1.0" });
 
   for (const def of allTools) {
@@ -76,7 +79,22 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((e) => {
-  process.stderr.write(`[plasmic-mcp] fatal: ${(e as Error)?.message ?? e}\n`);
-  process.exit(1);
-});
+// Only start the stdio server when run directly (`node dist/index.js`) —
+// src/http.ts imports buildServer/allTools from this module without booting it.
+const isEntrypoint = (() => {
+  try {
+    return (
+      process.argv[1] !== undefined &&
+      realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+    );
+  } catch {
+    return false;
+  }
+})();
+
+if (isEntrypoint) {
+  main().catch((e) => {
+    process.stderr.write(`[plasmic-mcp] fatal: ${(e as Error)?.message ?? e}\n`);
+    process.exit(1);
+  });
+}
