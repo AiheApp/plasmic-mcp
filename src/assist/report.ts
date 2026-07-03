@@ -47,21 +47,27 @@ export interface AssistReport {
   };
 }
 
-/** Derive the final status from what the agent said vs. what actually happened. */
+/**
+ * Derive the final status from what the agent said vs. what actually happened.
+ *
+ * Order-aware: a failed atomic batch saves NOTHING, so a failure followed by a
+ * successful re-plan+apply is a clean `done` — only a failure that was never
+ * recovered (the LAST mutation failed) degrades the status.
+ */
 export function resolveStatus(
   reported: string | undefined,
   mutations: MutationRecord[],
   integrityIssues: string[]
 ): AssistStatus {
-  const failed = mutations.filter((m) => !m.ok);
   const succeeded = mutations.filter((m) => m.ok);
+  const last = mutations[mutations.length - 1];
   if (reported === "needs_clarification" && succeeded.length === 0) {
     return "needs_clarification";
   }
   if (integrityIssues.length > 0) {
     return succeeded.length > 0 ? "partial_failure" : "failed";
   }
-  if (failed.length > 0) {
+  if (mutations.length > 0 && !last.ok) {
     return succeeded.length > 0 ? "partial_failure" : "failed";
   }
   if (reported === "failed") return "failed";
@@ -75,6 +81,13 @@ export function defaultUndo(mutations: MutationRecord[], publicUrl: string): str
     const r = m.result as Record<string, unknown>;
     for (const key of ["elementIid", "pageIid"]) {
       if (typeof r[key] === "string") created.push(`${key}=${r[key]} (${m.tool})`);
+    }
+    // batch apply results carry an env map: op $id → {iid, ...}
+    if (r.ids && typeof r.ids === "object") {
+      for (const [opId, outputs] of Object.entries(r.ids as Record<string, unknown>)) {
+        const iid = (outputs as Record<string, unknown> | null)?.iid;
+        if (typeof iid === "string") created.push(`${opId}=${iid} (${m.tool})`);
+      }
     }
   }
   const lines = [

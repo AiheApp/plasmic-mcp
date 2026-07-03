@@ -5,25 +5,27 @@
  * grant_revoke, token CRUD, publish, project create/clone) — the assistant
  * mutates page content only. Assembled from the tool modules directly (NOT
  * src/index.ts, which starts the stdio server on import).
+ *
+ * Mutations go exclusively through the atomic batch pair
+ * (plasmic_plan_mutations / plasmic_apply_mutations): one plan, one confirm,
+ * ONE revision save, and a failed batch applies nothing. The per-op mutation
+ * tools (each of which saves its own revision) are excluded so the agent
+ * cannot leave a request half-applied.
  */
 
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { ToolDef } from "../tools/types.js";
 import { readTools } from "../tools/read.js";
 import { modelTools } from "../tools/model.js";
+import { batchTools } from "../tools/batch.js";
 
 const ALLOWED_READS = new Set([
   "plasmic_get_project_meta",
   "plasmic_list_tokens",
 ]);
 
-export const assistTools: ToolDef[] = [
-  ...readTools.filter((t) => ALLOWED_READS.has(t.name)),
-  ...modelTools, // all 10 page/element tools incl. list_pages/get_page_model
-];
-
-/** Mutation tools (everything that saves a new revision). */
-export const MUTATING_TOOLS = new Set([
+/** Per-op mutation tools — save one revision each; superseded by the batch pair. */
+const PER_OP_MUTATORS = new Set([
   "plasmic_create_page",
   "plasmic_update_page_text",
   "plasmic_add_element",
@@ -32,6 +34,15 @@ export const MUTATING_TOOLS = new Set([
   "plasmic_upsert_component",
   "plasmic_duplicate_page",
 ]);
+
+export const assistTools: ToolDef[] = [
+  ...readTools.filter((t) => ALLOWED_READS.has(t.name)),
+  ...modelTools.filter((t) => !PER_OP_MUTATORS.has(t.name)), // list_pages, get_page_model, get_element
+  ...batchTools, // plasmic_plan_mutations, plasmic_apply_mutations
+];
+
+/** Mutation tools (everything that saves a new revision). */
+export const MUTATING_TOOLS = new Set(["plasmic_apply_mutations"]);
 
 export interface AnthropicToolSpec {
   name: string;

@@ -26,3 +26,11 @@ The one skill-specific rule: step 5 of the workflow (preview + confirm) is a
 REAL user interaction here — show the plan preview and wait for the user's
 explicit "yes" (or equivalent) in the conversation before calling
 `plasmic_apply_mutations`. If the user declines or amends, re-plan.
+
+## Related surfaces
+
+- Durable webhook: `POST https://automate.aihe.me/webhook/design-assist`
+  (`{projectId, request, pagePath?}`) — the n8n-fronted design-assist service
+  (same batch backend, headless: confirmation is pre-given).
+- CLI: `npm run assist -- <projectId> "<request>"` in
+  `/Users/salami/Documents/projects/plasmic-mcp`.
