@@ -85,6 +85,11 @@ export class PlasmicClient {
     this.fetchImpl = cfg.fetchImpl ?? fetch;
   }
 
+  /** The API host this client talks to (no trailing slash). */
+  get hostUrl(): string {
+    return this.host;
+  }
+
   // ---- cookie jar -------------------------------------------------------
   private storeCookies(res: Response): void {
     const headers = res.headers as Headers & { getSetCookie?: () => string[] };
