@@ -81,7 +81,7 @@ describe("summarizePage / diffPages", () => {
 // ---- tool subset ---------------------------------------------------------------
 
 describe("assistTools", () => {
-  it("excludes destructive/admin tools", () => {
+  it("excludes destructive/admin tools and the per-op mutators", () => {
     const names = new Set(assistTools.map((t) => t.name));
     for (const banned of [
       "plasmic_delete_project",
@@ -92,16 +92,7 @@ describe("assistTools", () => {
       "plasmic_publish_project",
       "plasmic_create_project",
       "plasmic_generate_ui",
-    ]) {
-      expect(names.has(banned), `${banned} must be excluded`).toBe(false);
-    }
-  });
-
-  it("includes the 10 model tools + curated reads", () => {
-    const names = new Set(assistTools.map((t) => t.name));
-    for (const required of [
-      "plasmic_list_pages",
-      "plasmic_get_page_model",
+      // per-op mutators save one revision each — superseded by the batch pair
       "plasmic_create_page",
       "plasmic_update_page_text",
       "plasmic_add_element",
@@ -109,9 +100,21 @@ describe("assistTools", () => {
       "plasmic_apply_token",
       "plasmic_upsert_component",
       "plasmic_duplicate_page",
+    ]) {
+      expect(names.has(banned), `${banned} must be excluded`).toBe(false);
+    }
+  });
+
+  it("includes the model reads, curated reads, and the atomic batch pair", () => {
+    const names = new Set(assistTools.map((t) => t.name));
+    for (const required of [
+      "plasmic_list_pages",
+      "plasmic_get_page_model",
       "plasmic_get_element",
       "plasmic_list_tokens",
       "plasmic_get_project_meta",
+      "plasmic_plan_mutations",
+      "plasmic_apply_mutations",
     ]) {
       expect(names.has(required), `${required} must be included`).toBe(true);
     }
@@ -181,6 +184,10 @@ describe("resolveStatus", () => {
     expect(resolveStatus("done", [ok], ["dangling"])).toBe("partial_failure");
   });
 
+  it("failed batch then successful re-apply → done (atomic refusal saved nothing)", () => {
+    expect(resolveStatus("done", [bad, ok], [])).toBe("done");
+  });
+
   it("defaultUndo lists created iids", () => {
     const undo = defaultUndo(
       [{ tool: "plasmic_add_element", args: {}, ok: true, result: { elementIid: "el1" } }],
@@ -188,14 +195,31 @@ describe("resolveStatus", () => {
     );
     expect(undo).toContain("el1");
   });
+
+  it("defaultUndo lists batch-created iids from the apply ids env", () => {
+    const undo = defaultUndo(
+      [
+        {
+          tool: "plasmic_apply_mutations",
+          args: {},
+          ok: true,
+          result: { applied: true, ids: { hero: { iid: "el9", rs: "rs9" } } },
+        },
+      ],
+      "http://x"
+    );
+    expect(undo).toContain("hero=el9");
+  });
 });
 
 // ---- loop (scripted fake Anthropic + fake Plasmic API) -------------------------
 
 describe("runAssist (offline)", () => {
   function fakePlasmicClient(): PlasmicClient {
-    // A stable fake project: one Home page, revision bumps on save.
+    // A stable fake project: one Home page; saves bump the revision and
+    // persist the posted bundle so re-reads see the applied change.
     const { model } = siteWithPage("Home", "/", "Hello");
+    let data = JSON.stringify(model);
     let revision = 3;
     const fake = {
       hostUrl: "http://fake",
@@ -204,13 +228,15 @@ describe("runAssist (offline)", () => {
           return { tokens: [{ uuid: "tok1", name: "primary", type: "Color", value: "#123456" }] };
         }
         if (path.match(/^\/api\/v1\/projects\/[^/]+$/)) {
-          return { rev: { revision, data: JSON.stringify(model) }, project: { name: "Fake" } };
+          return { rev: { revision, data }, project: { name: "Fake" } };
         }
         throw new Error(`fake GET not handled: ${path}`);
       },
-      post: async (path: string) => {
+      post: async (path: string, body?: unknown) => {
         if (path.includes("/revisions/")) {
           revision += 1;
+          const posted = (body as { data?: string } | undefined)?.data;
+          if (typeof posted === "string") data = posted;
           return {};
         }
         throw new Error(`fake POST not handled: ${path}`);
@@ -288,5 +314,116 @@ describe("runAssist (offline)", () => {
     expect(report.status).toBe("needs_clarification");
     expect(report.question).toContain("Which page");
     expect(report.mutations).toEqual([]);
+  });
+
+  it("plans and applies an atomic batch → done, one revision bump, honest diff", async () => {
+    const client = fakePlasmicClient();
+    const ops = [{ op: "set_text", path: "/", text: "Hello world" }];
+    let call = 0;
+    const createMessage: MessagesCreate = async () => {
+      call += 1;
+      if (call === 1) {
+        return {
+          content: [
+            {
+              type: "tool_use",
+              id: "t1",
+              name: "plasmic_plan_mutations",
+              input: { projectId: "p1", ops },
+            },
+          ],
+          stop_reason: "tool_use",
+        } as never;
+      }
+      if (call === 2) {
+        return {
+          content: [
+            {
+              type: "tool_use",
+              id: "t2",
+              name: "plasmic_apply_mutations",
+              input: { projectId: "p1", ops, expectedRevision: 3 },
+            },
+          ],
+          stop_reason: "tool_use",
+        } as never;
+      }
+      return {
+        content: [
+          {
+            type: "tool_use",
+            id: "t3",
+            name: "assist_report",
+            input: { status: "done", summary: "Changed the hero text to Hello world." },
+          },
+        ],
+        stop_reason: "tool_use",
+      } as never;
+    };
+
+    const report = await runAssist(
+      client,
+      { projectId: "p1", request: "change the hero text to Hello world" },
+      { createMessage, model: "test-model" }
+    );
+    expect(report.status).toBe("done");
+    // the plan call is NOT a mutation; only the apply is recorded
+    expect(report.mutations).toHaveLength(1);
+    expect(report.mutations[0].tool).toBe("plasmic_apply_mutations");
+    expect(report.mutations[0].ok).toBe(true);
+    expect(report.revisions).toEqual({ from: 3, to: 4 });
+    const mod = report.diff.find((d) => d.change === "modified");
+    expect(mod?.textsAdded).toContain("Hello world");
+    expect(report.integrityIssues).toEqual([]);
+  });
+
+  it("records a REVISION_CONFLICT apply as a failed mutation despite a rosy report", async () => {
+    const client = fakePlasmicClient();
+    let call = 0;
+    const createMessage: MessagesCreate = async () => {
+      call += 1;
+      if (call === 1) {
+        return {
+          content: [
+            {
+              type: "tool_use",
+              id: "t1",
+              name: "plasmic_apply_mutations",
+              input: {
+                projectId: "p1",
+                ops: [{ op: "set_text", path: "/", text: "X" }],
+                expectedRevision: 99,
+              },
+            },
+          ],
+          stop_reason: "tool_use",
+        } as never;
+      }
+      return {
+        content: [
+          {
+            type: "tool_use",
+            id: "t2",
+            name: "assist_report",
+            input: { status: "done", summary: "All good." },
+          },
+        ],
+        stop_reason: "tool_use",
+      } as never;
+    };
+
+    const report = await runAssist(
+      client,
+      { projectId: "p1", request: "change text" },
+      { createMessage, model: "test-model" }
+    );
+    // the conflict resolves normally (applied:false) but must count as a failure
+    expect(report.mutations).toHaveLength(1);
+    expect(report.mutations[0].ok).toBe(false);
+    expect((report.mutations[0].result as { code?: string }).code).toBe(
+      "REVISION_CONFLICT"
+    );
+    expect(report.status).toBe("failed");
+    expect(report.revisions).toEqual({ from: 3, to: 3 });
   });
 });

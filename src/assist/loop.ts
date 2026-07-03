@@ -212,7 +212,10 @@ export async function runAssist(
       try {
         const parsed = def.schema.parse(args);
         const result = await def.handler(client, parsed as never);
-        if (isMutation) mutations.push({ tool: use.name, args, ok: true, result });
+        // Batch refusals (invalid ops, REVISION_CONFLICT) resolve normally with
+        // applied:false — record them as failed mutations so reports stay honest.
+        const applied = (result as { applied?: unknown } | null)?.applied !== false;
+        if (isMutation) mutations.push({ tool: use.name, args, ok: applied, result });
         results.push({
           type: "tool_result",
           tool_use_id: use.id,
