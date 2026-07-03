@@ -85,6 +85,28 @@ live-proven node shapes.
 | `plasmic_duplicate_page` | Clone a page (component + PageArena) with a new name + path |
 | `plasmic_get_element` | Read one element's styles / text / children by iid |
 
+### Atomic batch mutation (preview → confirm → apply)
+
+The design-assistant workflow (ClickUp 86ey4ferx) rides on two batch tools
+backed by [`src/model/batch.ts`](src/model/batch.ts):
+
+| Tool | Description |
+|---|---|
+| `plasmic_plan_mutations` | Validate + trial-execute an ops batch WITHOUT saving; returns `baseRevision` + a human-readable preview diff, or per-op errors |
+| `plasmic_apply_mutations` | Re-validate against the fresh head and apply the whole batch in ONE revision save; `expectedRevision` mismatch aborts with `REVISION_CONFLICT` |
+
+Ops (`create_page`, `duplicate_page`, `add_element`, `set_text`,
+`delete_element`, `apply_token`, `set_styles`) chain through `$id`
+placeholders (`$hero.rootTpl`, `$cta.rs`, …). A batch is atomic: any failing
+op means nothing is saved. Batch validation is intentionally stricter than
+the single-op tools (e.g. `create_page` rejects an already-taken path with
+`PATH_TAKEN`). The Studio server additionally rejects stale `revisionNum`
+saves with HTTP 412 (verified live), so concurrent Studio edits cannot be
+clobbered.
+
+The assistant prompt, skill, and runbook live in [`assistant/`](assistant);
+the live benchmark harness in [`bench/`](bench).
+
 The library enforces these graph invariants (each covered by a unit test):
 
 1. every node added to `map` has a `__ref` back-link from its parent
@@ -96,12 +118,49 @@ The library enforces these graph invariants (each covered by a unit test):
 7. `revisionNum` = `currentRevision + 1` exactly
 
 > **Note — `apply_token`:** the design-token reference is written as the CSS
-> `var(--token-<uuid>)` string form (the ground-truth material had no conclusive
-> RuleSet token-ref literal). Verify against a live save if tokens don't resolve.
+> `var(--token-<uuid>)` string form (shared helper `tokenRefValue`). Verified
+> live (2026-07-02): the value round-trips through a revision save for
+> project-local tokens. Canvas rendering of REGISTERED (host-app) tokens
+> depends on the registration CSS being loaded.
 >
 > **Note — `upsert_component` (create path):** code-component node shape is
 > derived from the OSS `model-schema.ts` (no live-proven literal like pages
 > have); treat first-time creation as best-effort pending a live E2E.
+
+## Design assist (designer request → Studio mutation)
+
+The **design-assist** layer (`src/assist/`) turns a designer's natural-language
+request into verified model mutations: it renders the prompt template at
+[`prompts/design-assistant.md`](prompts/design-assistant.md) with live project
+context (pages, the project's design tokens, registered code components), runs
+an Anthropic tool loop over a **curated, non-destructive subset** of the tools
+above (no delete_project / devflags / permissions / publish), then
+**independently verifies** — re-reads the model, diffs page summaries
+(element counts + texts), and integrity-checks the graph for dangling `__ref`s
+and broken parent links — before reporting.
+
+Three ways to run it:
+
+```bash
+# CLI (local, .env provides creds)
+npm run assist -- <projectId> "add a hero section with our primary color and a CTA"
+
+# HTTP service (the n8n webhook proxies to this)
+ASSIST_BEARER_TOKEN=… ANTHROPIC_API_KEY=… npm run assist:server
+curl -X POST :8766/design-assist -H "authorization: Bearer $TOKEN" \
+  -d '{"projectId":"…","request":"…"}'          # add "wait":false for async job mode
+
+# Live eval harness (throwaway project; ticket gate: ≥4/5 + ambiguity probe)
+npm run eval:assist
+```
+
+The report is structured JSON: `status` (`done` / `needs_clarification` /
+`partial_failure` / `failed`), designer-facing `summary`, per-call `mutations`
+log, `revisions.from→to`, measured page `diff`, `integrityIssues`, a Studio
+review link, and `undo` guidance. Env: `ASSIST_MODEL` (default
+`claude-sonnet-5`), `ASSIST_PORT` (default 8766), `ASSIST_BEARER_TOKEN`
+(required by the server), `ANTHROPIC_API_KEY`, `ASSIST_PUBLIC_STUDIO_URL`
+(designer-facing links when `PLASMIC_HOST` is an internal address).
 
 ## Deferred (not built)
 

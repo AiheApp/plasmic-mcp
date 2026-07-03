@@ -7,7 +7,8 @@
     "plasmic-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "prompts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -15,12 +16,19 @@
     "dev": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "start:http": "node dist/http-server.js"
+    "start:http": "node dist/http.js",
+    "start:page-api": "node dist/http-server.js",
+    "bench": "tsx bench/run.ts",
+    "assist": "tsx src/assist/cli.ts",
+    "assist:server": "node dist/assist/server.js",
+    "eval:assist": "tsx scripts/eval-assist.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.109.1",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "dotenv": "^16.4.5",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

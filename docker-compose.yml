@@ -4,7 +4,9 @@
 # on the host if the Studio stack's network name differs.
 services:
   plasmic-page-api:
-    build: .
+    build:
+      context: .
+      dockerfile: deploy/page-api.Dockerfile
     container_name: plasmic-page-api
     restart: unless-stopped
     ports:
