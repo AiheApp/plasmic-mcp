@@ -20,12 +20,15 @@
     "start:page-api": "node dist/http-server.js",
     "bench": "tsx bench/run.ts",
     "assist": "tsx src/assist/cli.ts",
-    "assist:server": "node dist/assist/server.js"
+    "assist:server": "node dist/assist/server.js",
+    "gen:tokens": "tsx scripts/gen-tokens.ts",
+    "canvas:bench": "tsx scripts/canvas-bench.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "dotenv": "^16.4.5",
+    "playwright": "^1.61.1",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.25.2"
   },

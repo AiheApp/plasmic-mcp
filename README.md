@@ -178,6 +178,35 @@ review link, and `undo` guidance. Env: `ASSIST_MODEL` (default
 (required by the server), `ANTHROPIC_API_KEY`, `ASSIST_PUBLIC_STUDIO_URL`
 (designer-facing links when `PLASMIC_HOST` is an internal address).
 
+### Canvas insertion (browser-driven)
+
+These tools drive a headless Chromium against the live Studio to land HTML as
+**real Plasmic nodes** via `studioCtx.paste` — retrying on canvas-timing
+failures and verifying success through the REST model (revision must advance
+AND the new nodes must exist in the saved model — **no false-green**). See
+[`docs/canvas-runbook.md`](docs/canvas-runbook.md) for the full gotcha list
+and error-kind triage table.
+
+| Tool | Description |
+|---|---|
+| `plasmic_insert_html` | Paste raw HTML into a page (or auto-create one via Studio when the project has none); structured errors with diagnostics |
+| `plasmic_insert_template` | Render a built-in token-aware template and insert it; validates `var(--token-*)` refs against the target project first (`tokenPolicy: strict\|warn`) |
+| `plasmic_list_templates` | Template catalog: names, param schemas, tokens used, CSS/token authoring rules |
+| `plasmic_canvas_doctor` | Read-only triage: auth, Studio reachability, `allowHtmlPaste`, `PLASMIC_AI_TOOLS`, per-page arena frame counts |
+
+Requirements: `npx playwright install chromium` on the machine running the
+server (the Docker image is REST-only; canvas tools fail with a structured
+`BROWSER_UNAVAILABLE` error there). Self-hosted HTML paste needs the account
+to have the `allowHtmlPaste` devflag (admin-team emails); on Plasmic Cloud the
+tools fall back to `PLASMIC_AI_TOOLS.createComponent` (auth via
+`PLASMIC_STORAGE_STATE`).
+
+Templates reference design tokens as `var(--token-<kebab-name>)`; the token
+allowlist ([`src/templates/tokens.ts`](src/templates/tokens.ts)) is generated
+from the live design-system project with `npm run gen:tokens`. Reliability
+benchmark: `npm run canvas:bench` (N sequential inserts on a scratch project;
+target ≥90% without manual retry).
+
 ## Deferred (not built)
 
 - **In-canvas live design** (`PLASMIC_AI_TOOLS`) — OSS-stubbed in the self-hosted

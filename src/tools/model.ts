@@ -39,7 +39,7 @@ import { fetchRev, saveRev, site, resolvePage, baseVariantOf } from "./revision.
 
 // ---- small model readers ----------------------------------------------------
 
-function pageSummary(model: PlasmicModel, iid: string) {
+export function pageSummary(model: PlasmicModel, iid: string) {
   const comp = getNode(model, iid) as ModelNode & {
     name: string;
     pageMeta?: Ref | null;

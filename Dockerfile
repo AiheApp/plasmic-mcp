@@ -4,6 +4,13 @@
 #           -e PLASMIC_HOST=http://10.0.2.2:3003 \
 #           -e PLASMIC_EMAIL=... -e PLASMIC_PASSWORD=... \
 #           -e MCP_HTTP_TOKEN=... plasmic-mcp-http
+#
+# NOTE: this image is REST-only. The canvas tools (plasmic_insert_html /
+# plasmic_insert_template / plasmic_canvas_doctor) need a Chromium install
+# (npx playwright install chromium) and are not bundled here — playwright is
+# lazy-loaded, so the rest of the server works without it and canvas calls
+# fail with a structured BROWSER_UNAVAILABLE error. Run canvas ops from a
+# host with a browser (see docs/canvas-runbook.md).
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.json ./
