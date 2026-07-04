@@ -73,6 +73,13 @@ interface ReportToolInput {
   undo?: string;
 }
 
+/** Hook fired after every successfully executed (non-terminal) tool call. */
+export type OnToolResult = (
+  name: string,
+  parsedArgs: unknown,
+  result: unknown
+) => void;
+
 export interface AssistRequest {
   projectId: string;
   request: string;
@@ -109,11 +116,35 @@ function toolErrorText(e: unknown): string {
   return `Error: ${(e as Error)?.message ?? String(e)}`;
 }
 
-export async function runAssist(
+/** Everything the shared agent-loop driver hands back to its caller. */
+export interface AgentLoopOutcome {
+  ctx: Awaited<ReturnType<typeof gatherContext>>;
+  before: ReturnType<typeof summarizePages>;
+  mutations: MutationRecord[];
+  reported: ReportToolInput | undefined;
+  finalText: string;
+  iterations: number;
+  toolCalls: number;
+  model: string;
+  studioUrl: string;
+  start: number;
+}
+
+/**
+ * The shared Anthropic tool-loop driver. runAssist and planAssist differ only
+ * in which tools the model may call and which terminal tool ends the run —
+ * keeping one driver stops the truncate/error/logging semantics drifting.
+ */
+export async function runAgentLoop(
   client: PlasmicClient,
   req: AssistRequest,
-  opts: AssistOptions = {}
-): Promise<AssistReport> {
+  opts: AssistOptions,
+  loopCfg: {
+    toolDefs: typeof assistTools;
+    terminalTool: AnthropicToolSpec;
+    onToolResult?: OnToolResult;
+  }
+): Promise<AgentLoopOutcome> {
   const start = Date.now();
   const model = opts.model ?? process.env.ASSIST_MODEL ?? DEFAULT_MODEL;
   const maxIterations = opts.maxIterations ?? 24;
@@ -145,7 +176,9 @@ export async function runAssist(
   const system = renderSystemPrompt(ctx, renderOpts);
   const studioUrl = `${publicStudioUrl.replace(/\/+$/, "")}/projects/${req.projectId}`;
 
-  const tools = [...toAnthropicTools(assistTools), REPORT_TOOL];
+  const { toolDefs, terminalTool, onToolResult } = loopCfg;
+  const tools = [...toAnthropicTools(toolDefs), terminalTool];
+  const byName = new Map(toolDefs.map((t) => [t.name, t]));
   const userText = req.pagePath
     ? `${req.request}\n\n(Target page path: ${req.pagePath})`
     : req.request;
@@ -175,14 +208,14 @@ export async function runAssist(
       if (b.type === "text" && b.text.trim()) finalText = b.text.trim();
     }
 
-    if (toolUses.length === 0) break; // model stopped without assist_report
+    if (toolUses.length === 0) break; // model stopped without the terminal tool
 
     messages.push({ role: "assistant", content: response.content });
     const results: Anthropic.ToolResultBlockParam[] = [];
     let done = false;
 
     for (const use of toolUses) {
-      if (use.name === REPORT_TOOL.name) {
+      if (use.name === terminalTool.name) {
         reported = use.input as ReportToolInput;
         results.push({
           type: "tool_result",
@@ -194,7 +227,7 @@ export async function runAssist(
       }
 
       toolCalls += 1;
-      const def = toolByName(use.name);
+      const def = byName.get(use.name);
       const args = (use.input ?? {}) as Record<string, unknown>;
       const isMutation = MUTATING_TOOLS.has(use.name);
       log(`tool ${use.name} ${JSON.stringify(args).slice(0, 200)}`);
@@ -216,6 +249,7 @@ export async function runAssist(
         // applied:false — record them as failed mutations so reports stay honest.
         const applied = (result as { applied?: unknown } | null)?.applied !== false;
         if (isMutation) mutations.push({ tool: use.name, args, ok: applied, result });
+        onToolResult?.(use.name, parsed, result);
         results.push({
           type: "tool_result",
           tool_use_id: use.id,
@@ -236,6 +270,41 @@ export async function runAssist(
     messages.push({ role: "user", content: results });
     if (done) break;
   }
+
+  return {
+    ctx,
+    before,
+    mutations,
+    reported,
+    finalText,
+    iterations,
+    toolCalls,
+    model,
+    studioUrl,
+    start,
+  };
+}
+
+export async function runAssist(
+  client: PlasmicClient,
+  req: AssistRequest,
+  opts: AssistOptions = {}
+): Promise<AssistReport> {
+  const {
+    ctx,
+    before,
+    mutations,
+    reported,
+    finalText,
+    iterations,
+    toolCalls,
+    model,
+    studioUrl,
+    start,
+  } = await runAgentLoop(client, req, opts, {
+    toolDefs: assistTools,
+    terminalTool: REPORT_TOOL,
+  });
 
   // ---- independent verification ----
   let after: PlasmicModel | undefined;
