@@ -16,6 +16,17 @@ export const HOSTLESS_DATA_VERSION = 1;
 /** Name of the mandatory base variant every Component must have. */
 export const BASE_VARIANT_NAME = "base";
 
+/**
+ * Screen sizes for new PageArena frames when the project has no healthy page
+ * arena to copy from — Studio's desktop-first defaults
+ * (`defaultResponsiveSettings.screenSizes` in wab/shared/responsiveness.ts).
+ */
+export const DEFAULT_SCREEN_SIZES: readonly { width: number; height: number }[] =
+  [
+    { width: 1366, height: 768 },
+    { width: 414, height: 736 },
+  ];
+
 /** __type tag constants (avoid stringly-typed drift at call sites). */
 export const TYPE = {
   Site: "Site",
@@ -30,6 +41,9 @@ export const TYPE = {
   PageMeta: "PageMeta",
   PageArena: "PageArena",
   ArenaFrameGrid: "ArenaFrameGrid",
+  ArenaFrameRow: "ArenaFrameRow",
+  ArenaFrameCell: "ArenaFrameCell",
+  ArenaFrame: "ArenaFrame",
   Mixin: "Mixin",
   StyleToken: "StyleToken",
 } as const;

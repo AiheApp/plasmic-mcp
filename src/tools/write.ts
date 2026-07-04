@@ -14,6 +14,7 @@ import {
   UpdateTokenInput,
   DeleteTokenInput,
   DeleteProjectInput,
+  SetAppHostInput,
 } from "../schemas.js";
 
 const enc = encodeURIComponent;
@@ -50,6 +51,35 @@ export const writeTools: ToolDef[] = [
       UpdateProjectMetaCheck.parse(args); // enforce "at least one field" cross-field rule
       const { projectId, ...body } = args;
       return client.put(`/api/v1/projects/${enc(projectId)}/meta`, body);
+    },
+  }),
+  defineTool({
+    name: "plasmic_set_app_host",
+    description:
+      "Configure a project's custom app host (Studio: project menu → 'Configure custom app host'). Until this is set, a new project has ZERO code-component visibility. Pass the host app's /plasmic-host URL, or null to clear. Returns the previous and new values.",
+    schema: SetAppHostInput,
+    handler: async (client, { projectId, hostUrl, branchId }) => {
+      // Best-effort read of the current value so callers see the transition.
+      let previousHostUrl: string | null | undefined;
+      try {
+        const current = (await client.get(
+          `/api/v1/projects/${enc(projectId)}`
+        )) as { project?: { hostUrl?: string | null } };
+        previousHostUrl = current?.project?.hostUrl ?? null;
+      } catch {
+        previousHostUrl = undefined; // read failed; the write still proceeds
+      }
+      const res = (await client.put(
+        `/api/v1/projects/${enc(projectId)}/update-host`,
+        branchId ? { hostUrl, branchId } : { hostUrl }
+      )) as { hostUrl?: string | null; updatedAt?: string };
+      return {
+        projectId,
+        previousHostUrl,
+        hostUrl: res?.hostUrl ?? hostUrl,
+        branchId: branchId ?? null,
+        updatedAt: res?.updatedAt ?? null,
+      };
     },
   }),
   defineTool({

@@ -1,4 +1,5 @@
 import {
+  arenaContextOf,
   buildPageComponent,
   mergeFragment,
   type ModelNode,
@@ -6,7 +7,11 @@ import {
   type Ref,
 } from "../../src/model/index.js";
 
-/** A minimal valid bundle: root Site with empty container arrays. */
+/**
+ * A minimal valid bundle: root Site with empty container arrays plus the
+ * mandatory global base Variant (real Sites always have one; frame containers
+ * carry a VariantSetting on it).
+ */
 export function emptySite(): PlasmicModel {
   return {
     version: "0-test",
@@ -21,6 +26,19 @@ export function emptySite(): PlasmicModel {
         componentArenas: [],
         styleTokens: [],
         mixins: [],
+        globalVariant: { __ref: "globalvarxxx" },
+      },
+      globalvarxxx: {
+        __type: "Variant",
+        uuid: "globalvarxxx",
+        name: "base",
+        selectors: null,
+        codeComponentName: null,
+        codeComponentVariantKeys: null,
+        parent: null,
+        mediaQuery: null,
+        description: null,
+        forTpl: null,
       },
     },
   };
@@ -41,7 +59,7 @@ export function siteWithPage(
   text: string | undefined = "Hello"
 ): SiteWithPage {
   const model = emptySite();
-  const frag = buildPageComponent(name, path, text);
+  const frag = buildPageComponent(name, path, text, arenaContextOf(model));
   const { idMap } = mergeFragment(model, frag);
   const pageIid = idMap[frag.pageId];
   const arenaIid = idMap[frag.arenaId];

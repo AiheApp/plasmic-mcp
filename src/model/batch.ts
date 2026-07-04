@@ -21,6 +21,7 @@
 
 import type { ModelNode, PlasmicModel, Ref, Site } from "./types.js";
 import {
+  arenaContextOf,
   collectDescendants,
   deleteNode,
   findPageByPath,
@@ -30,7 +31,7 @@ import {
   ownerComponentOf,
   updateRuleSet,
 } from "./graph.js";
-import { buildElement, buildPageComponent } from "./builders.js";
+import { buildElement, buildPageArena, buildPageComponent } from "./builders.js";
 
 // ---- op types (kept zod-free; the tool layer validates shapes) --------------
 
@@ -494,7 +495,7 @@ export function executeOps(
         if (findPageByPath(model, o.path)) {
           fail(i, o.op, "PATH_TAKEN", `a page already exists at path ${o.path}`);
         }
-        const frag = buildPageComponent(o.name, o.path, o.text);
+        const frag = buildPageComponent(o.name, o.path, o.text, arenaContextOf(model));
         const { idMap } = mergeFragment(model, frag);
         const pageIid = idMap[frag.pageId];
         const arenaIid = idMap[frag.arenaId];
@@ -543,20 +544,11 @@ export function executeOps(
         if (findPageByPath(model, o.path)) {
           return fail(i, o.op, "PATH_TAKEN", `a page already exists at path ${o.path}`);
         }
-        // Locate the source PageArena.
-        const arenaIid = Object.keys(model.map).find((iid) => {
-          const a = model.map[iid] as ModelNode & { component?: Ref };
-          return (
-            a.__type === "PageArena" && isRef(a.component) && a.component.__ref === sourceIid
-          );
-        });
+        // Clone the component subtree ONLY — the source arena's grids own
+        // row/cell/frame nodes a shallow copy would SHARE between the two
+        // arenas (and its frame containers would still instance the source
+        // page). The clone gets a freshly built arena instead.
         const subtree = new Set<string>([sourceIid, ...collectDescendants(model, sourceIid)]);
-        if (arenaIid) {
-          subtree.add(arenaIid);
-          const arena = model.map[arenaIid] as ModelNode & { matrix?: Ref; customMatrix?: Ref };
-          if (isRef(arena.matrix)) subtree.add(arena.matrix.__ref);
-          if (isRef(arena.customMatrix)) subtree.add(arena.customMatrix.__ref);
-        }
         const nodes: Record<string, ModelNode> = {};
         for (const iid of subtree) {
           nodes[iid] = JSON.parse(JSON.stringify(model.map[iid])) as ModelNode;
@@ -570,13 +562,20 @@ export function executeOps(
         }
         const s = siteOf(model);
         s.components.push({ __ref: newComp });
-        const newArena = arenaIid ? idMap[arenaIid] : undefined;
-        if (newArena) s.pageArenas.push({ __ref: newArena });
+        const cloneBaseVar = (getNode(model, newComp) as ModelNode & { variants?: Ref[] })
+          .variants?.[0];
+        if (!isRef(cloneBaseVar)) {
+          return fail(i, o.op, "INVALID_TARGET", `cloned page ${newComp} has no base variant`);
+        }
+        const arenaFrag = buildPageArena(newComp, cloneBaseVar.__ref, arenaContextOf(model));
+        const { idMap: arenaIdMap } = mergeFragment(model, arenaFrag);
+        const newArena = arenaIdMap[arenaFrag.arenaId];
+        s.pageArenas.push({ __ref: newArena });
         const rootTpl = (getNode(model, newComp) as ModelNode & { tplTree: Ref }).tplTree.__ref;
         const produces: Record<string, string> = {
           iid: newComp,
           rootTpl,
-          ...(newArena ? { arena: newArena } : {}),
+          arena: newArena,
         };
         if (o.id) env[o.id] = produces;
         addModified(newComp);

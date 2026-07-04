@@ -83,6 +83,20 @@ export const UpdateProjectMetaCheck = UpdateProjectMetaInput.refine(
   "provide at least one field to update besides projectId"
 );
 
+export const SetAppHostInput = z
+  .object({
+    projectId,
+    /** http(s) URL of the host app's /plasmic-host page, or null to clear. */
+    hostUrl: z
+      .string()
+      .url("hostUrl must be an http(s) URL")
+      .regex(/^https?:\/\//, "hostUrl must be an http(s) URL")
+      .nullable(),
+    /** Optional branch to set the host on (defaults to the main branch). */
+    branchId: z.string().min(1).optional(),
+  })
+  .strict();
+
 export const PublishProjectInput = z
   .object({
     projectId,
@@ -273,6 +287,14 @@ export const DuplicatePageInput = z
 
 export const GetElementInput = z
   .object({ projectId, iid: iid("iid") })
+  .strict();
+
+export const RepairPageArenasInput = z
+  .object({
+    projectId,
+    /** Report what would be repaired without saving a revision. */
+    dryRun: z.boolean().optional(),
+  })
   .strict();
 
 // ---- batch mutations ----

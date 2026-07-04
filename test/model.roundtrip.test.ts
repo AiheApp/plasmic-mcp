@@ -11,11 +11,12 @@ import {
   type Ref,
 } from "../src/model/index.js";
 import { emptySite, assertNoOrphanRefs } from "./fixtures/site.js";
+import { arenaContextOf } from "../src/model/index.js";
 
 describe("round-trip: build → merge → serialize → reparse → find", () => {
   it("finds the page after a full serialize/parse cycle, graph stays valid", () => {
     const model = emptySite();
-    const frag = buildPageComponent("Landing", "/landing", "Welcome");
+    const frag = buildPageComponent("Landing", "/landing", "Welcome", arenaContextOf(model));
     const { idMap } = mergeFragment(model, frag);
     const pageIid = idMap[frag.pageId];
     const arenaIid = idMap[frag.arenaId];
