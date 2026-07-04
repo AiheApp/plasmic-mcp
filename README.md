@@ -170,6 +170,18 @@ curl -X POST :8766/design-assist -H "authorization: Bearer $TOKEN" \
 npm run bench
 ```
 
+**Two-phase mode** (human-in-the-loop confirmation — the in-Studio Copilot
+surface, ClickUp 86ey5b413): `POST /design-assist/plan` runs a plan-only agent
+loop whose tool surface provably cannot write (`plasmic_apply_mutations` is not
+offered to the model). A `status:"ready"` response carries a `planId` — the
+validated ops stay server-side (in-memory, TTL `ASSIST_PLAN_TTL_MS`, default
+15min) so the confirming client can reference the plan but never redefine it.
+`POST /design-assist/apply {planId}` then applies those exact ops
+deterministically — no model call — with `expectedRevision` set to the plan's
+`baseRevision`: `409 REVISION_CONFLICT` if the project advanced, `422
+BATCH_REFUSED` if it no longer validates, `404 PLAN_NOT_FOUND` after expiry;
+duplicate confirms replay the recorded outcome instead of re-applying.
+
 The report is structured JSON: `status` (`done` / `needs_clarification` /
 `partial_failure` / `failed`), designer-facing `summary`, per-call `mutations`
 log, `revisions.from→to`, measured page `diff`, `integrityIssues`, a Studio

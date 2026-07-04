@@ -44,6 +44,15 @@ export const assistTools: ToolDef[] = [
 /** Mutation tools (everything that saves a new revision). */
 export const MUTATING_TOOLS = new Set(["plasmic_apply_mutations"]);
 
+/**
+ * The plan-phase tool surface: assistTools minus every mutating tool. A loop
+ * run with these is PROVABLY incapable of writing to the Studio, regardless
+ * of what the model decides — the two-phase /plan endpoint relies on this.
+ */
+export const planPhaseTools: ToolDef[] = assistTools.filter(
+  (t) => !MUTATING_TOOLS.has(t.name)
+);
+
 export interface AnthropicToolSpec {
   name: string;
   description: string;
