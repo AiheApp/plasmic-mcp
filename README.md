@@ -51,9 +51,14 @@ Use a **dedicated service account**; rotate the password; never commit `.env`.
 
 ### Safe writes
 `plasmic_create_project`, `plasmic_create_project_with_hostless_packages`,
-`plasmic_clone_project`, `plasmic_update_project_meta`, `plasmic_publish_project`,
-`plasmic_grant_revoke`, `plasmic_set_devflags`, `plasmic_generate_ui` (Copilot).
+`plasmic_clone_project`, `plasmic_update_project_meta`, `plasmic_set_app_host`,
+`plasmic_publish_project`, `plasmic_grant_revoke`, `plasmic_set_devflags`,
+`plasmic_generate_ui` (Copilot).
 
+- **`plasmic_set_app_host`** configures the project's custom app host
+  (`PUT /projects/{id}/update-host`) — the step Studio hides behind
+  "Configure custom app host". Until it's set, a new project has zero
+  code-component visibility. Pass `hostUrl: null` to clear.
 - **`plasmic_set_devflags`** is admin-only and writes a **global, instance-wide**
   override. It does a safe read-modify-write of a single key and **requires
   `confirm: true`**.
@@ -76,14 +81,23 @@ live-proven node shapes.
 |---|---|
 | `plasmic_list_pages` | List page components (name, path, iid) at the current revision |
 | `plasmic_get_page_model` | Full iid graph; pass `pageIid` to scope to one page's subtree |
-| `plasmic_create_page` | Create a page (name, path, optional text); wires Site.components + Site.pageArenas |
+| `plasmic_create_page` | Create a page (name, path, optional text); wires Site.components + Site.pageArenas with a fully-framed PageArena |
 | `plasmic_update_page_text` | Replace RawText in a page (select by `pageIid` or `path`; optional single `textIid`) |
 | `plasmic_add_element` | Insert a TplTag (div/span/text/image/…) under a parent iid |
 | `plasmic_delete_element` | Remove a TplTag + all descendants; strips the parent ref |
 | `plasmic_apply_token` | Set a RuleSet CSS prop to a design-token ref |
 | `plasmic_upsert_component` | Create/update registered code-component metadata |
-| `plasmic_duplicate_page` | Clone a page (component + PageArena) with a new name + path |
+| `plasmic_duplicate_page` | Clone a page's component subtree with a new name + path; the clone gets a freshly built PageArena |
 | `plasmic_get_element` | Read one element's styles / text / children by iid |
+| `plasmic_repair_page_arenas` | Heal broken/missing PageArenas (empty grids from older headless creation); idempotent, supports `dryRun` |
+
+> **PageArena shape.** Studio requires `matrix` to hold one `ArenaFrameRow`
+> per component variant with one `ArenaFrame` per screen size (each frame's
+> `container` instances the page), and `customMatrix` to hold ONE empty row.
+> Pages created with empty grids render "This page is empty" and crash
+> add-screen-size with `PageArena has no ArenaFrameRow`. All page-creating
+> paths here now build the full shape (ground truth: a Studio-UI-created
+> page, 2026-07-04); `plasmic_repair_page_arenas` retrofits old pages.
 
 ### Atomic batch mutation (preview → confirm → apply)
 

@@ -10,6 +10,7 @@
  */
 
 import type { ModelNode, PlasmicModel, Ref } from "./types.js";
+import { DEFAULT_SCREEN_SIZES } from "./constants.js";
 
 // ---- iid allocation ---------------------------------------------------------
 
@@ -79,6 +80,66 @@ export function findPageByPath(model: PlasmicModel, path: string): string | null
     if (pm && pm.path === path) return iid;
   }
   return null;
+}
+
+/** Site facts a PageArena builder needs. */
+export interface ArenaContext {
+  /** iid of `Site.globalVariant` (frame containers carry a VariantSetting on it). */
+  globalVariantIid: string;
+  /** One frame per size, per arena row. */
+  screenSizes: { width: number; height: number }[];
+}
+
+/**
+ * Derive the arena-construction context from a live model. Mirrors Studio's
+ * `getSiteScreenSizes` (wab/shared/core/sites.ts) — copy the frame sizes of an
+ * existing page arena — extended to skip broken (row-less/frame-less) arenas
+ * so repair runs on damaged projects still pick up healthy custom sizes.
+ * Falls back to `DEFAULT_SCREEN_SIZES`.
+ */
+export function arenaContextOf(model: PlasmicModel): ArenaContext {
+  const site = getNode(model, model.root) as ModelNode & {
+    globalVariant?: Ref | null;
+    pageArenas?: Ref[];
+  };
+  if (!isRef(site.globalVariant)) {
+    throw new Error("Site has no globalVariant — cannot build page arenas");
+  }
+
+  let screenSizes: ArenaContext["screenSizes"] | undefined;
+  for (const aRef of site.pageArenas ?? []) {
+    if (!isRef(aRef)) continue;
+    const arena = model.map[aRef.__ref] as
+      | (ModelNode & { matrix?: Ref })
+      | undefined;
+    const matrix = arena && deref<ModelNode & { rows?: Ref[] }>(model, arena.matrix ?? null);
+    const firstRow = deref<ModelNode & { cols?: Ref[] }>(
+      model,
+      matrix?.rows?.[0] ?? null
+    );
+    const cols = firstRow?.cols ?? [];
+    if (cols.length === 0) continue;
+    const sizes: ArenaContext["screenSizes"] = [];
+    for (const cRef of cols) {
+      const cell = deref<ModelNode & { frame?: Ref }>(model, cRef);
+      const frame = deref<ModelNode & { width?: number; height?: number }>(
+        model,
+        cell?.frame ?? null
+      );
+      if (frame && typeof frame.width === "number") {
+        sizes.push({ width: frame.width, height: frame.height ?? 768 });
+      }
+    }
+    if (sizes.length > 0) {
+      screenSizes = sizes;
+      break;
+    }
+  }
+
+  return {
+    globalVariantIid: site.globalVariant.__ref,
+    screenSizes: screenSizes ?? DEFAULT_SCREEN_SIZES.map((s) => ({ ...s })),
+  };
 }
 
 /**
@@ -197,6 +258,22 @@ function ownedRefs(model: PlasmicModel, node: ModelNode): Ref[] {
       push(node.tplTree);
       push(node.variants);
       push(node.pageMeta);
+      break;
+    case "PageArena":
+      push(node.matrix);
+      push(node.customMatrix);
+      break;
+    case "ArenaFrameGrid":
+      push(node.rows);
+      break;
+    case "ArenaFrameRow":
+      push(node.cols); // rowKey is a variant REFERENCE, not ownership
+      break;
+    case "ArenaFrameCell":
+      push(node.frame); // cellKey is a variant reference
+      break;
+    case "ArenaFrame":
+      push(node.container);
       break;
     default:
       break;

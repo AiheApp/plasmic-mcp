@@ -12,9 +12,11 @@ import {
   UpsertComponentInput,
   DuplicatePageInput,
   GetElementInput,
+  RepairPageArenasInput,
 } from "../schemas.js";
 import {
   buildPageComponent,
+  buildPageArena,
   buildElement,
   buildCodeComponent,
   mergeFragment,
@@ -23,6 +25,7 @@ import {
   collectDescendants,
   findNodesByType,
   ownerComponentOf,
+  arenaContextOf,
   getNode,
   deref,
   isRef,
@@ -84,7 +87,7 @@ export const modelTools: ToolDef[] = [
     schema: CreatePageInput,
     handler: async (client, { projectId, name, path, text }) => {
       const { revision, model } = await fetchRev(client, projectId);
-      const frag = buildPageComponent(name, path, text);
+      const frag = buildPageComponent(name, path, text, arenaContextOf(model));
       const { idMap } = mergeFragment(model, frag);
       const pageIid = idMap[frag.pageId];
       const arenaIid = idMap[frag.arenaId];
@@ -247,22 +250,11 @@ export const modelTools: ToolDef[] = [
           undefined,
           "http"
         );
-      // Locate the source PageArena + its two grids.
-      const arenaIid = findNodesByType(model, "PageArena").find((iid) => {
-        const a = getNode(model, iid) as ModelNode & { component?: Ref };
-        return isRef(a.component) && a.component.__ref === sourceIid;
-      });
-      // Gather the subtree: component + descendants (+ arena + grids).
+      // Clone the component subtree ONLY. The source arena is NOT cloned:
+      // its grids own row/cell/frame nodes that a shallow copy would end up
+      // SHARING between the two arenas (and the frames' containers would
+      // still instance the source page). The clone gets a fresh arena.
       const subtree = new Set<string>([sourceIid, ...collectDescendants(model, sourceIid)]);
-      if (arenaIid) {
-        subtree.add(arenaIid);
-        const arena = getNode(model, arenaIid) as ModelNode & {
-          matrix?: Ref;
-          customMatrix?: Ref;
-        };
-        if (isRef(arena.matrix)) subtree.add(arena.matrix.__ref);
-        if (isRef(arena.customMatrix)) subtree.add(arena.customMatrix.__ref);
-      }
       // Build a fragment keyed by the CURRENT iids (as temp ids) with clones.
       const nodes: Record<string, ModelNode> = {};
       for (const iid of subtree) {
@@ -277,13 +269,135 @@ export const modelTools: ToolDef[] = [
         (getNode(model, newComp) as { pageMeta?: Ref | null }).pageMeta ?? null
       );
       if (clonedPm) clonedPm.path = path;
+      // Fresh arena for the clone (mirrors what Studio does on duplicate).
+      const cloneBaseVar = (getNode(model, newComp) as { variants?: Ref[] })
+        .variants?.[0];
+      if (!isRef(cloneBaseVar))
+        throw new PlasmicError(
+          `cloned page ${newComp} has no base variant`,
+          undefined,
+          undefined,
+          "http"
+        );
+      const arenaFrag = buildPageArena(newComp, cloneBaseVar.__ref, arenaContextOf(model));
+      const { idMap: arenaIdMap } = mergeFragment(model, arenaFrag);
+      const newArena = arenaIdMap[arenaFrag.arenaId];
       // Wire into the Site.
       const s = site(model);
       s.components.push({ __ref: newComp });
-      const newArena = arenaIid ? idMap[arenaIid] : undefined;
-      if (newArena) s.pageArenas.push({ __ref: newArena });
+      s.pageArenas.push({ __ref: newArena });
       await saveRev(client, projectId, model, revision, [newComp]);
-      return { sourceIid, pageIid: newComp, arenaIid: newArena ?? null, name, path, revision: revision + 1 };
+      return { sourceIid, pageIid: newComp, arenaIid: newArena, name, path, revision: revision + 1 };
+    },
+  }),
+
+  defineTool({
+    name: "plasmic_repair_page_arenas",
+    description:
+      "Heal broken PageArenas (empty matrix grids from older headless page creation — Studio shows 'This page is empty' and add-screen-size crashes). Rebuilds frames in place for every damaged page, and adds a missing arena for any page without one. Idempotent; pass dryRun:true to only report.",
+    schema: RepairPageArenasInput,
+    handler: async (client, { projectId, dryRun }) => {
+      const { revision, model } = await fetchRev(client, projectId);
+      const ctx = arenaContextOf(model);
+      const s = site(model);
+
+      // A grid is broken when it has no rows or no row has any frame cell.
+      const gridBroken = (ref: Ref | null | undefined): boolean => {
+        const grid =
+          ref && isRef(ref)
+            ? (model.map[ref.__ref] as (ModelNode & { rows?: Ref[] }) | undefined)
+            : undefined;
+        const rows = grid?.rows ?? [];
+        if (rows.length === 0) return true;
+        return rows.every((rRef) => {
+          const row =
+            isRef(rRef) && (model.map[rRef.__ref] as ModelNode & { cols?: Ref[] });
+          return !row || (row.cols ?? []).length === 0;
+        });
+      };
+
+      const repaired: { pageIid: string; arenaIid: string; name: string; path: string | null; action: string }[] = [];
+
+      const arenaByPage = new Map<string, string>();
+      for (const arenaIid of findNodesByType(model, "PageArena")) {
+        const a = getNode(model, arenaIid) as ModelNode & { component?: Ref };
+        if (isRef(a.component)) arenaByPage.set(a.component.__ref, arenaIid);
+      }
+
+      const pages = findNodesByType(model, "Component").filter(
+        (iid) => (getNode(model, iid) as { type?: string }).type === "page"
+      );
+
+      for (const pageIid of pages) {
+        const comp = getNode(model, pageIid) as ModelNode & {
+          name: string;
+          variants?: Ref[];
+        };
+        const baseVar = comp.variants?.[0];
+        if (!isRef(baseVar)) continue; // cannot rebuild without a base variant
+        const arenaIid = arenaByPage.get(pageIid);
+
+        const summary = pageSummary(model, pageIid);
+
+        if (arenaIid === undefined) {
+          // Page with no arena at all — build one and register it.
+          let newArenaIid = "(new)";
+          if (!dryRun) {
+            const frag = buildPageArena(pageIid, baseVar.__ref, ctx);
+            const { idMap } = mergeFragment(model, frag);
+            newArenaIid = idMap[frag.arenaId];
+            s.pageArenas.push({ __ref: newArenaIid });
+          }
+          repaired.push({
+            pageIid,
+            arenaIid: newArenaIid,
+            name: summary.name,
+            path: summary.path,
+            action: "created-arena",
+          });
+          continue;
+        }
+
+        const arena = getNode(model, arenaIid) as ModelNode & {
+          matrix?: Ref;
+          customMatrix?: Ref;
+        };
+        if (!gridBroken(arena.matrix)) continue; // healthy — leave untouched
+
+        if (!dryRun) {
+          // Build fresh grids, steal them into the EXISTING arena node (so the
+          // Site.pageArenas ref stays valid), then delete the broken grids.
+          const frag = buildPageArena(pageIid, baseVar.__ref, ctx);
+          const { idMap } = mergeFragment(model, frag);
+          const tempArenaIid = idMap[frag.arenaId];
+          const tempArena = getNode(model, tempArenaIid) as ModelNode & {
+            matrix: Ref;
+            customMatrix: Ref;
+          };
+          const oldMatrix = isRef(arena.matrix) ? arena.matrix.__ref : null;
+          const oldCust = isRef(arena.customMatrix) ? arena.customMatrix.__ref : null;
+          arena.matrix = tempArena.matrix;
+          arena.customMatrix = tempArena.customMatrix;
+          // The temp PageArena node itself is now unreferenced scaffolding —
+          // remove ONLY it (deleteNode would take the grids with it).
+          delete model.map[tempArenaIid];
+          if (oldMatrix && oldMatrix in model.map) deleteNode(model, oldMatrix);
+          if (oldCust && oldCust in model.map) deleteNode(model, oldCust);
+        }
+        repaired.push({
+          pageIid,
+          arenaIid,
+          name: summary.name,
+          path: summary.path,
+          action: "rebuilt-grids",
+        });
+      }
+
+      if (repaired.length === 0 || dryRun) {
+        return { revision, dryRun: dryRun ?? false, repaired, saved: false };
+      }
+      await saveRev(client, projectId, model, revision, repaired.map((r) => r.pageIid));
+      return { revision: revision + 1, dryRun: false, repaired, saved: true };
     },
   }),
 

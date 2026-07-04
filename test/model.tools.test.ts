@@ -1,17 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { PlasmicClient } from "../src/client.js";
 import { modelTools } from "../src/tools/model.js";
+import { writeTools } from "../src/tools/write.js";
 import {
   serializeModel,
   findNodesByType,
+  collectDescendants,
   type ModelNode,
   type PlasmicModel,
   type Ref,
 } from "../src/model/index.js";
-import { emptySite, siteWithPage } from "./fixtures/site.js";
+import { emptySite, siteWithPage, assertNoOrphanRefs } from "./fixtures/site.js";
 
 function tool(name: string) {
-  const def = modelTools.find((t) => t.name === name);
+  const def =
+    modelTools.find((t) => t.name === name) ??
+    writeTools.find((t) => t.name === name);
   if (!def) throw new Error(`tool not found: ${name}`);
   return def;
 }
@@ -21,7 +25,11 @@ function tool(name: string) {
  * captures the save-revision POST body. Returns the parsed saved bundle + body.
  */
 function makeClient(model: PlasmicModel, revision: number) {
-  const captured: { body?: Record<string, unknown>; savedModel?: PlasmicModel } = {};
+  const captured: {
+    body?: Record<string, unknown>;
+    savedModel?: PlasmicModel;
+    hostBody?: Record<string, unknown>;
+  } = {};
   const data = serializeModel(model);
   const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
     const method = (init?.method ?? "GET").toUpperCase();
@@ -39,7 +47,16 @@ function makeClient(model: PlasmicModel, revision: number) {
     if (method === "POST" && path === "/api/v1/auth/login")
       return json(200, { status: true, user: { id: "u1" } });
     if (method === "GET" && /^\/api\/v1\/projects\/[^/]+$/.test(path))
-      return json(200, { rev: { revision, data } });
+      return json(200, { rev: { revision, data }, project: { hostUrl: "https://old.host/plasmic-host" } });
+    if (method === "PUT" && /^\/api\/v1\/projects\/[^/]+\/update-host$/.test(path)) {
+      const body = JSON.parse(init!.body as string) as Record<string, unknown>;
+      captured.hostBody = body;
+      return json(200, {
+        hostUrl: body.hostUrl,
+        branchId: body.branchId ?? null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      });
+    }
     const saveMatch = path.match(/^\/api\/v1\/projects\/[^/]+\/revisions\/(\d+)$/);
     if (method === "POST" && saveMatch) {
       const body = JSON.parse(init!.body as string) as Record<string, unknown>;
@@ -152,15 +169,15 @@ describe("model tools (mocked client)", () => {
     expect(rs.values.color).toBe("var(--token-tok123)");
   });
 
-  it("plasmic_duplicate_page clones component + arena with a new path", async () => {
-    const { model, pageIid } = siteWithPage("Home", "/", "Hello");
+  it("plasmic_duplicate_page clones component + builds a FRESH arena (no node sharing)", async () => {
+    const { model, pageIid, arenaIid } = siteWithPage("Home", "/", "Hello");
     const { client, captured } = makeClient(model, 4);
     const res = (await tool("plasmic_duplicate_page").handler(client, {
       projectId: "p1",
       sourceIid: pageIid,
       name: "Home Copy",
       path: "/home-copy",
-    })) as { pageIid: string; arenaIid: string | null };
+    })) as { pageIid: string; arenaIid: string };
     expect(res.pageIid).not.toBe(pageIid);
     const saved = captured.savedModel!;
     expect(findNodesByType(saved, "Component").length).toBe(2);
@@ -170,6 +187,103 @@ describe("model tools (mocked client)", () => {
     expect((saved.map[clone.pageMeta.__ref] as { path: string }).path).toBe(
       "/home-copy"
     );
+    // The clone's arena shares ZERO nodes with the source arena, and every
+    // frame container instances the CLONE, not the source.
+    const sourceArenaNodes = new Set([arenaIid, ...collectDescendants(saved, arenaIid)]);
+    const cloneArenaNodes = [res.arenaIid, ...collectDescendants(saved, res.arenaIid)];
+    expect(cloneArenaNodes.some((iid) => sourceArenaNodes.has(iid))).toBe(false);
+    const cloneContainers = cloneArenaNodes.filter(
+      (iid) => saved.map[iid].__type === "TplComponent"
+    );
+    expect(cloneContainers.length).toBeGreaterThan(0);
+    for (const iid of cloneContainers) {
+      expect((saved.map[iid] as { component: Ref }).component.__ref).toBe(res.pageIid);
+    }
+    assertNoOrphanRefs(saved);
+  });
+
+  it("plasmic_repair_page_arenas rebuilds empty-grid arenas in place, idempotently", async () => {
+    const { model, pageIid, arenaIid } = siteWithPage("Home", "/", "Hello");
+    // Recreate the legacy damage: swap the healthy grids for empty ones.
+    const arena = model.map[arenaIid] as ModelNode & { matrix: Ref; customMatrix: Ref };
+    model.map["brokengrid01"] = { __type: "ArenaFrameGrid", rows: [] };
+    model.map["brokengrid02"] = { __type: "ArenaFrameGrid", rows: [] };
+    const oldMatrix = arena.matrix.__ref;
+    const oldCust = arena.customMatrix.__ref;
+    for (const iid of [oldMatrix, ...collectDescendants(model, oldMatrix)]) delete model.map[iid];
+    for (const iid of [oldCust, ...collectDescendants(model, oldCust)]) delete model.map[iid];
+    arena.matrix = { __ref: "brokengrid01" };
+    arena.customMatrix = { __ref: "brokengrid02" };
+
+    const { client, captured } = makeClient(model, 9);
+    const res = (await tool("plasmic_repair_page_arenas").handler(client, {
+      projectId: "p1",
+    })) as { repaired: { pageIid: string; arenaIid: string; action: string }[]; saved: boolean; revision: number };
+    expect(res.saved).toBe(true);
+    expect(res.revision).toBe(10);
+    expect(res.repaired).toEqual([
+      expect.objectContaining({ pageIid, arenaIid, action: "rebuilt-grids" }),
+    ]);
+    expect(captured.body!.modifiedComponentIids).toEqual([pageIid]);
+
+    const saved = captured.savedModel!;
+    // Same arena node, fresh healthy grids; broken grids removed.
+    const savedArena = saved.map[arenaIid] as ModelNode & { matrix: Ref; customMatrix: Ref };
+    expect("brokengrid01" in saved.map).toBe(false);
+    expect("brokengrid02" in saved.map).toBe(false);
+    const grid = saved.map[savedArena.matrix.__ref] as ModelNode & { rows: Ref[] };
+    expect(grid.rows).toHaveLength(1);
+    const row = saved.map[grid.rows[0].__ref] as ModelNode & { cols: Ref[] };
+    expect(row.cols.length).toBeGreaterThan(0);
+    assertNoOrphanRefs(saved);
+
+    // Idempotence: a second run on the repaired model saves nothing.
+    const { client: client2 } = makeClient(saved, 10);
+    const res2 = (await tool("plasmic_repair_page_arenas").handler(client2, {
+      projectId: "p1",
+    })) as { repaired: unknown[]; saved: boolean };
+    expect(res2.saved).toBe(false);
+    expect(res2.repaired).toEqual([]);
+  });
+
+  it("plasmic_repair_page_arenas dryRun reports without saving; missing arena gets created", async () => {
+    const { model, pageIid, arenaIid } = siteWithPage("Home", "/", "Hello");
+    // Remove the arena entirely (page with no arena at all).
+    const site = model.map[model.root] as ModelNode & { pageArenas: Ref[] };
+    site.pageArenas = site.pageArenas.filter((r) => r.__ref !== arenaIid);
+    for (const iid of [arenaIid, ...collectDescendants(model, arenaIid)]) delete model.map[iid];
+
+    const { client, captured } = makeClient(model, 3);
+    const dry = (await tool("plasmic_repair_page_arenas").handler(client, {
+      projectId: "p1",
+      dryRun: true,
+    })) as { repaired: { action: string }[]; saved: boolean };
+    expect(dry.saved).toBe(false);
+    expect(dry.repaired).toEqual([expect.objectContaining({ action: "created-arena" })]);
+    expect(captured.body).toBeUndefined(); // nothing saved
+
+    const real = (await tool("plasmic_repair_page_arenas").handler(client, {
+      projectId: "p1",
+    })) as { repaired: { arenaIid: string }[]; saved: boolean };
+    expect(real.saved).toBe(true);
+    const saved = captured.savedModel!;
+    const savedSite = saved.map[saved.root] as ModelNode & { pageArenas: Ref[] };
+    expect(savedSite.pageArenas.some((r) => r.__ref === real.repaired[0].arenaIid)).toBe(true);
+    const newArena = saved.map[real.repaired[0].arenaIid] as ModelNode & { component: Ref };
+    expect(newArena.component.__ref).toBe(pageIid);
+    assertNoOrphanRefs(saved);
+  });
+
+  it("plasmic_set_app_host PUTs update-host and reports the transition", async () => {
+    const { client, captured } = makeClient(emptySite(), 1);
+    const res = (await tool("plasmic_set_app_host").handler(client, {
+      projectId: "p1",
+      hostUrl: "https://app.test/plasmic-host",
+    })) as { previousHostUrl: string | null; hostUrl: string; updatedAt: string | null };
+    expect(captured.hostBody).toEqual({ hostUrl: "https://app.test/plasmic-host" });
+    expect(res.previousHostUrl).toBe("https://old.host/plasmic-host");
+    expect(res.hostUrl).toBe("https://app.test/plasmic-host");
+    expect(res.updatedAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("plasmic_get_element reads styles/text/children by iid", async () => {
