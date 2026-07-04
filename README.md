@@ -178,8 +178,50 @@ review link, and `undo` guidance. Env: `ASSIST_MODEL` (default
 (required by the server), `ANTHROPIC_API_KEY`, `ASSIST_PUBLIC_STUDIO_URL`
 (designer-facing links when `PLASMIC_HOST` is an internal address).
 
+## Canvas insertion + verification (browser-driven)
+
+These tools drive a headless Chromium against the live Studio to land HTML as
+**real Plasmic nodes** via `studioCtx.paste` — retrying on canvas-timing
+failures and verifying success through the REST model (revision must advance
+AND the new nodes must exist in the saved model — **no false-green**). See
+[`docs/canvas-runbook.md`](docs/canvas-runbook.md) for the full gotcha list
+and error-kind triage table.
+
+| Tool | Description |
+|---|---|
+| `plasmic_insert_html` | Paste raw HTML into a page (or auto-create one via Studio when the project has none); structured errors with diagnostics |
+| `plasmic_insert_template` | Render a built-in token-aware template and insert it; validates `var(--token-*)` refs against the target project first (`tokenPolicy: strict\|warn`) |
+| `plasmic_list_templates` | Template catalog: names, param schemas, tokens used, CSS/token authoring rules |
+| `plasmic_canvas_doctor` | Read-only triage: auth, Studio reachability, `allowHtmlPaste`, `PLASMIC_AI_TOOLS`, per-page arena frame counts |
+| `plasmic_canvas_screenshot` | Capture what Studio ACTUALLY renders for a page (per-frame artboard PNG, or `fullStudio`); the anti-"silent absence" verification |
+
+Requirements: `npx playwright install chromium` on the machine running the
+server (the Docker image is REST-only; canvas tools fail with a structured
+`BROWSER_UNAVAILABLE` error there). Self-hosted HTML paste needs the account
+to have the `allowHtmlPaste` devflag (admin-team emails); on Plasmic Cloud the
+tools fall back to `PLASMIC_AI_TOOLS.createComponent` (auth via
+`PLASMIC_STORAGE_STATE`).
+
+**Plasmic Cloud auth, headless:** `npm run cloud:login` logs into
+`studio.plasmic.app` with `PLASMIC_CLOUD_EMAIL`/`PLASMIC_CLOUD_PASSWORD` from
+`.env` (values: the ClickUp passwords/links doc), verifies the session against
+`/api/v1/auth/self`, and saves a Playwright storage-state to
+`.plasmic/cloud-state.json` (gitignored). Point `PLASMIC_STORAGE_STATE` at it
+and every canvas tool works against Cloud with zero interactive login; re-run
+the script when the session expires.
+
+Cloud caveat (pre-existing, not an auth issue): a project whose app host is
+`http://localhost:3000/plasmic-host` never boots its canvas on HTTPS
+`studio.plasmic.app` (mixed content) — `openStudio` times out with
+`CANVAS_NOT_READY` even though the session is valid. Such projects need the
+local host served through an HTTPS tunnel, or an HTTPS-deployed host.
+
+Templates reference design tokens as `var(--token-<kebab-name>)`; the token
+allowlist ([`src/templates/tokens.ts`](src/templates/tokens.ts)) is generated
+from the live design-system project with `npm run gen:tokens`. Reliability
+benchmark: `npm run canvas:bench` (N sequential inserts on a scratch project;
+target ≥90% without manual retry).
+
 ## Deferred (not built)
 
-- **In-canvas live design** (`PLASMIC_AI_TOOLS`) — OSS-stubbed in the self-hosted
-  build; needs the copilot tool registry + bridge implemented in core.
 - **Reverse codegen** (`POST …/code/components`) — possible phase 2.

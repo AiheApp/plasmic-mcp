@@ -70,7 +70,7 @@ interface RawResult {
 const DEFAULT_UA = "plasmic-mcp/0.1 (+https://studio.aihe.dev)";
 
 export class PlasmicClient {
-  private readonly host: string;
+  readonly host: string;
   private readonly userAgent: string;
   private readonly fetchImpl: typeof fetch;
 
@@ -253,6 +253,16 @@ export class PlasmicClient {
 
   private async ensureAuth(): Promise<void> {
     if (!this.authed) await this.login();
+  }
+
+  /**
+   * Session cookies for browser reuse (canvas tools): logs in if needed and
+   * returns the jar as name/value pairs. Injecting these into a Playwright
+   * context yields an authenticated Studio session with no UI login.
+   */
+  async getCookies(): Promise<Array<{ name: string; value: string }>> {
+    await this.ensureAuth();
+    return [...this.cookies.entries()].map(([name, value]) => ({ name, value }));
   }
 
   // ---- public request API ----------------------------------------------

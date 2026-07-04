@@ -297,6 +297,72 @@ export const RepairPageArenasInput = z
   })
   .strict();
 
+// ---- canvas (browser-driven Studio) ----
+const pageSelector = z
+  .string()
+  .min(1)
+  .describe("Target page: component uuid/iid, page name, or URL path. Omit for the project's first page.");
+
+export const InsertHtmlInput = z
+  .object({
+    projectId,
+    page: pageSelector.optional(),
+    html: z.string().min(1, "html is required"),
+    /** Per-attempt canvas-ready budget; attempts back off 1s/2s/4s between retries. */
+    waitMs: z.number().int().min(500).max(30_000).optional(),
+    /** Minimum number of new model nodes the REST verify pass must observe (default 1). */
+    verifyNodeCount: z.number().int().min(1).optional(),
+    /**
+     * Name for the page the op creates when it must make one: PLASMIC_AI_TOOLS
+     * fallback (always creates a page) or paste path with no pasteable page in
+     * the project (empty project / only frame-less REST pages).
+     */
+    newPageName: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const InsertTemplateInput = z
+  .object({
+    projectId,
+    page: pageSelector.optional(),
+    template: z.string().min(1, "template is required"),
+    /** Template params; validated against the template's own schema (see plasmic_list_templates). */
+    params: z.record(z.unknown()),
+    /**
+     * strict (default): fail before pasting if the rendered HTML references
+     * design tokens the TARGET project doesn't have. warn: paste anyway and
+     * report the unbound refs in the result.
+     */
+    tokenPolicy: z.enum(["strict", "warn"]).optional(),
+    waitMs: z.number().int().min(500).max(30_000).optional(),
+    verifyNodeCount: z.number().int().min(1).optional(),
+    newPageName: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const ListTemplatesInput = z.object({}).strict();
+
+export const CanvasDoctorInput = z
+  .object({
+    projectId,
+    page: pageSelector.optional(),
+  })
+  .strict();
+
+export const CanvasScreenshotInput = z
+  .object({
+    projectId,
+    page: pageSelector.optional(),
+    /** Which arena frame (screen size) to capture: 0 = first/desktop. Default 0. */
+    frameIndex: z.number().int().min(0).optional(),
+    /** Capture the whole Studio window instead of just the artboard iframe. */
+    fullStudio: z.boolean().optional(),
+    /** Absolute output PNG path. Defaults to a temp file; returned either way. */
+    outPath: z.string().min(1).optional(),
+    waitMs: z.number().int().min(500).max(60_000).optional(),
+  })
+  .strict();
+
 // ---- batch mutations ----
 
 /**

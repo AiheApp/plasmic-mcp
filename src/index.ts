@@ -16,6 +16,8 @@ import { writeTools } from "./tools/write.js";
 import { copilotTools } from "./tools/copilot.js";
 import { modelTools } from "./tools/model.js";
 import { batchTools } from "./tools/batch.js";
+import { canvasTools } from "./tools/canvas.js";
+import { CanvasError } from "./browser/driver.js";
 
 export const allTools: ToolDef[] = [
   ...readTools,
@@ -23,6 +25,7 @@ export const allTools: ToolDef[] = [
   ...copilotTools,
   ...modelTools,
   ...batchTools,
+  ...canvasTools,
 ];
 
 function requireEnv(name: string): string {
@@ -50,6 +53,16 @@ export function buildServer(client: PlasmicClient): McpServer {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
         } catch (e) {
+          if (e instanceof CanvasError) {
+            // Machine-readable failure: kind + diagnostics let callers branch
+            // (and plasmic_canvas_doctor triage) without parsing prose.
+            const payload = JSON.stringify(
+              { success: false, kind: e.kind, message: e.message, diagnostics: e.diagnostics },
+              null,
+              2
+            );
+            return { isError: true, content: [{ type: "text", text: payload }] };
+          }
           const err =
             e instanceof PlasmicError
               ? `Plasmic error [${e.kind ?? "unknown"}${
