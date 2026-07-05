@@ -24,7 +24,11 @@ const ALLOWED_READS = new Set([
   "plasmic_list_tokens",
 ]);
 
-/** Per-op mutation tools — save one revision each; superseded by the batch pair. */
+/**
+ * Per-op mutation tools — each saves a revision per call. The content ops are
+ * superseded by the batch pair; repair_page_arenas is admin/maintenance, not a
+ * design op.
+ */
 const PER_OP_MUTATORS = new Set([
   "plasmic_create_page",
   "plasmic_update_page_text",
@@ -33,11 +37,12 @@ const PER_OP_MUTATORS = new Set([
   "plasmic_apply_token",
   "plasmic_upsert_component",
   "plasmic_duplicate_page",
+  "plasmic_repair_page_arenas",
 ]);
 
 export const assistTools: ToolDef[] = [
   ...readTools.filter((t) => ALLOWED_READS.has(t.name)),
-  ...modelTools.filter((t) => !PER_OP_MUTATORS.has(t.name)), // list_pages, get_page_model, get_element
+  ...modelTools.filter((t) => !PER_OP_MUTATORS.has(t.name)), // read-only survivors: list_pages, get_page_model, get_element
   ...batchTools, // plasmic_plan_mutations, plasmic_apply_mutations
 ];
 

@@ -24,6 +24,7 @@ import {
   arenaContextOf,
   collectDescendants,
   deleteNode,
+  findComponentByTplRoot,
   findPageByPath,
   getNode,
   isRef,
@@ -31,6 +32,7 @@ import {
   ownerComponentOf,
   updateRuleSet,
 } from "./graph.js";
+import { VOID_TAGS } from "./constants.js";
 import { buildElement, buildPageArena, buildPageComponent } from "./builders.js";
 
 // ---- op types (kept zod-free; the tool layer validates shapes) --------------
@@ -591,6 +593,18 @@ export function executeOps(
 
       case "add_element": {
         const parentIid = resolve(i, o.op, o.parentIid);
+        // Deliberate: text-type parents stay allowed — a text tpl's copy lives
+        // on VariantSetting.text, and Plasmic rich text legitimately parents
+        // tpl nodes under text tags. Void tags can never have children.
+        const parentNode = getNode(model, parentIid) as ModelNode & { tag?: string };
+        if (parentNode.__type === "TplTag" && VOID_TAGS.has(parentNode.tag ?? "")) {
+          return fail(
+            i,
+            o.op,
+            "INVALID_TARGET",
+            `parent ${parentIid} is <${parentNode.tag}>, a void element that cannot have children`
+          );
+        }
         const baseVariantIid = o.baseVariantIid
           ? resolve(i, o.op, o.baseVariantIid)
           : deriveBaseVariant(model, parentIid);
@@ -681,6 +695,16 @@ export function executeOps(
             o.op,
             "INVALID_TARGET",
             `${iid} is a ${node.__type}, not a Tpl element — batch delete only removes elements`
+          );
+        }
+        const rootOwner = findComponentByTplRoot(model, iid);
+        if (rootOwner) {
+          const name = (getNode(model, rootOwner) as { name?: string }).name;
+          return fail(
+            i,
+            o.op,
+            "INVALID_TARGET",
+            `${iid} is the tplTree root of component ${rootOwner}${name ? ` ("${name}")` : ""} — deleting a page/component root destroys it; delete its children instead`
           );
         }
         const owner = ownerComponentOf(model, iid); // resolve BEFORE delete

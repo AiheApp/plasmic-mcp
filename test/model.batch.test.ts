@@ -13,6 +13,7 @@ import {
   type Ref,
 } from "../src/model/index.js";
 import { assertNoOrphanRefs, emptySite, siteWithPage } from "./fixtures/site.js";
+import { checkIntegrity } from "../src/assist/integrity.js";
 
 const TOKENS: BatchContext["tokens"] = [
   { uuid: "tokPrimary1", name: "primary-blue", type: "Color", value: "#4169e1" },
@@ -66,6 +67,38 @@ describe("executeOps", () => {
     // element landed under the page root
     const rootTpl = model.map[env.pg.rootTpl] as ModelNode & { children: Ref[] };
     expect(rootTpl.children.some((r) => r.__ref === env.h1.iid)).toBe(true);
+  });
+
+  it("add_element + set_styles via $id.rs in one batch", () => {
+    const { model, rootTplIid, pageIid, baseVariantIid } = siteWithPage(
+      "Home",
+      "/",
+      "Hello"
+    );
+    const ops: MutationOp[] = [
+      {
+        op: "add_element",
+        id: "cta",
+        parentIid: rootTplIid,
+        tag: "button",
+        type: "text",
+        text: "Get started",
+        baseVariantIid,
+      },
+      {
+        op: "set_styles",
+        rsIid: "$cta.rs",
+        styles: { display: "flex", gap: "16px" },
+      },
+    ];
+    expect(prevalidateOps(model, ops, ctx)).toEqual([]);
+    const { modifiedComponentIids, env } = executeOps(model, ops, ctx);
+
+    assertNoOrphanRefs(model);
+    const rs = model.map[env.cta.rs] as ModelNode & { values: Record<string, string> };
+    expect(rs.values.display).toBe("flex");
+    expect(rs.values.gap).toBe("16px");
+    expect(modifiedComponentIids).toEqual([pageIid]);
   });
 
   it("throws UNKNOWN_REF for forward references and unknown ids/fields", () => {
@@ -132,6 +165,109 @@ describe("executeOps", () => {
       () => executeOps(model, [{ op: "delete_element", iid: pageIid }], ctx),
       "INVALID_TARGET"
     );
+  });
+
+  it("delete_element refuses a page's root tplTree element", () => {
+    const { model, pageIid, rootTplIid } = siteWithPage("Home", "/", "Hello");
+    const err = expectBatchError(
+      () => executeOps(model, [{ op: "delete_element", iid: rootTplIid }], ctx),
+      "INVALID_TARGET"
+    );
+    expect(err.detail.message).toContain("tplTree root");
+    // the refusal left the page intact
+    const page = model.map[pageIid] as ModelNode & { tplTree: Ref };
+    expect(page.tplTree.__ref).toBe(rootTplIid);
+    expect(checkIntegrity(model)).toEqual([]);
+  });
+
+  it("delete_element refuses an in-batch page root via $pg.rootTpl", () => {
+    const err = expectBatchError(
+      () =>
+        executeOps(
+          emptySite(),
+          [
+            { op: "create_page", id: "pg", name: "P", path: "/p" },
+            { op: "delete_element", iid: "$pg.rootTpl" },
+          ],
+          ctx
+        ),
+      "INVALID_TARGET"
+    );
+    expect(err.detail.opIndex).toBe(1);
+  });
+
+  it("add_element refuses void-tag parents", () => {
+    const { model, rootTplIid, baseVariantIid } = siteWithPage("Home", "/", "Hello");
+    const err = expectBatchError(
+      () =>
+        executeOps(
+          model,
+          [
+            {
+              op: "add_element",
+              id: "pic",
+              parentIid: rootTplIid,
+              tag: "img",
+              type: "image",
+              baseVariantIid,
+            },
+            { op: "add_element", parentIid: "$pic", tag: "div", type: "text", text: "x" },
+          ],
+          ctx
+        ),
+      "INVALID_TARGET"
+    );
+    expect(err.detail.opIndex).toBe(1);
+    expect(err.detail.message).toContain("void element");
+
+    // literal-iid variant: the img lands in one batch, a second batch refuses it
+    const second = siteWithPage("Home", "/", "Hello");
+    const { env } = executeOps(
+      second.model,
+      [
+        {
+          op: "add_element",
+          id: "pic",
+          parentIid: second.rootTplIid,
+          tag: "img",
+          type: "image",
+          baseVariantIid: second.baseVariantIid,
+        },
+      ],
+      ctx
+    );
+    expectBatchError(
+      () =>
+        executeOps(
+          second.model,
+          [{ op: "add_element", parentIid: env.pic.iid, tag: "div", type: "text", text: "x" }],
+          ctx
+        ),
+      "INVALID_TARGET"
+    );
+  });
+
+  it("add_element under a text-type parent remains allowed", () => {
+    const { model, rootTplIid, baseVariantIid } = siteWithPage("Home", "/", "Hello");
+    const { env } = executeOps(
+      model,
+      [
+        {
+          op: "add_element",
+          id: "txt",
+          parentIid: rootTplIid,
+          tag: "div",
+          type: "text",
+          text: "copy",
+          baseVariantIid,
+        },
+        { op: "add_element", id: "sp", parentIid: "$txt", tag: "span", type: "text", text: "x" },
+      ],
+      ctx
+    );
+    assertNoOrphanRefs(model);
+    const txt = model.map[env.txt.iid] as ModelNode & { children: Ref[] };
+    expect(txt.children.some((r) => r.__ref === env.sp.iid)).toBe(true);
   });
 
   it("create_page onto an existing path fails with PATH_TAKEN", () => {

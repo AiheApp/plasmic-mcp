@@ -180,9 +180,17 @@ export function ownerComponentOf(
   }
 
   // Find the Component whose tplTree points at this root tpl.
+  return findComponentByTplRoot(model, cur);
+}
+
+/** iid of the Component whose tplTree IS this tpl node, or null. */
+export function findComponentByTplRoot(
+  model: PlasmicModel,
+  tplIid: string
+): string | null {
   for (const compIid of findNodesByType(model, "Component")) {
     const comp = model.map[compIid] as ModelNode & { tplTree?: Ref };
-    if (isRef(comp.tplTree) && comp.tplTree.__ref === cur) return compIid;
+    if (isRef(comp.tplTree) && comp.tplTree.__ref === tplIid) return compIid;
   }
   return null;
 }

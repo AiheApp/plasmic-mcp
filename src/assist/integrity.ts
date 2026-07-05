@@ -19,6 +19,7 @@ import {
  *  - any `{__ref}` pointing at an iid that is not in `map`
  *  - a TplTag/TplComponent child whose `parent` does not point back at its
  *    containing node
+ *  - a Component with no tplTree root (every Component is built with one)
  * Returns human-readable issue strings; empty array = clean.
  */
 export function checkIntegrity(model: PlasmicModel): string[] {
@@ -58,6 +59,14 @@ export function checkIntegrity(model: PlasmicModel): string[] {
           `child ${c.__ref} has parent ${child.parent.__ref}, expected ${iid}`
         );
       }
+    }
+  }
+
+  for (const [iid, node] of Object.entries(model.map)) {
+    if (node.__type !== "Component") continue;
+    const comp = node as ModelNode & { name?: string; tplTree?: Ref | null };
+    if (!isRef(comp.tplTree)) {
+      issues.push(`Component ${iid} ("${comp.name ?? ""}") has no tplTree root`);
     }
   }
   return issues;

@@ -24,12 +24,14 @@ import {
   updateRuleSet,
   collectDescendants,
   findNodesByType,
+  findComponentByTplRoot,
   ownerComponentOf,
   arenaContextOf,
   getNode,
   deref,
   isRef,
   tokenRefValue,
+  VOID_TAGS,
   type PlasmicModel,
   type ModelNode,
   type Ref,
@@ -46,6 +48,11 @@ function pageSummary(model: PlasmicModel, iid: string) {
   };
   const pm = deref<ModelNode & { path?: string }>(model, comp.pageMeta ?? null);
   return { iid, name: comp.name, path: pm?.path ?? null };
+}
+
+/** Mirrors the batch executor's private truncate (keeps summaries compact). */
+function truncate(s: string, max = 48): string {
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
 export const modelTools: ToolDef[] = [
@@ -140,6 +147,14 @@ export const modelTools: ToolDef[] = [
       const { revision, model } = await fetchRev(client, projectId);
       if (!(parentIid in model.map))
         throw new PlasmicError(`parent not found: ${parentIid}`, undefined, undefined, "http");
+      const parentNode = getNode(model, parentIid) as ModelNode & { tag?: string };
+      if (parentNode.__type === "TplTag" && VOID_TAGS.has(parentNode.tag ?? ""))
+        throw new PlasmicError(
+          `parent ${parentIid} is <${parentNode.tag}>, a void element that cannot have children`,
+          undefined,
+          undefined,
+          "http"
+        );
       const baseVar = baseVariantIid ?? baseVariantOf(model, parentIid);
       const frag = buildElement({ tag, type, baseVariantIid: baseVar, text });
       const { rootIid } = mergeFragment(model, frag, parentIid);
@@ -158,6 +173,16 @@ export const modelTools: ToolDef[] = [
       const { revision, model } = await fetchRev(client, projectId);
       if (!(iid in model.map))
         throw new PlasmicError(`element not found: ${iid}`, undefined, undefined, "http");
+      const rootOwner = findComponentByTplRoot(model, iid);
+      if (rootOwner) {
+        const name = (getNode(model, rootOwner) as { name?: string }).name;
+        throw new PlasmicError(
+          `${iid} is the tplTree root of component ${rootOwner}${name ? ` ("${name}")` : ""} — deleting a page/component root destroys it; delete its children instead`,
+          undefined,
+          undefined,
+          "http"
+        );
+      }
       const owner = ownerComponentOf(model, iid); // resolve BEFORE delete
       const removed = [iid, ...collectDescendants(model, iid)];
       deleteNode(model, iid);
@@ -404,7 +429,7 @@ export const modelTools: ToolDef[] = [
   defineTool({
     name: "plasmic_get_element",
     description:
-      "Read one element by iid: its tag/type, base-variant styles (RuleSet values), text content, and child iids.",
+      "Read one element by iid: its tag/type, base-variant styles (RuleSet values), text content (text + textIid), every RawText in its subtree (use texts[].iid as a set_text textIid), and compact child summaries (iid/tag/type/text).",
     schema: GetElementInput,
     handler: async (client, { projectId, iid }) => {
       const { revision, model } = await fetchRev(client, projectId);
@@ -425,6 +450,24 @@ export const modelTools: ToolDef[] = [
         vs?.rs ?? null
       );
       const rawText = deref<ModelNode & { text?: string }>(model, vs?.text ?? null);
+      // Same traversal the set_text executor uses — every texts[].iid is a
+      // valid set_text textIid.
+      const texts = [iid, ...collectDescendants(model, iid)]
+        .filter((tid) => model.map[tid]?.__type === "RawText")
+        .map((tid) => ({
+          iid: tid,
+          text: (model.map[tid] as { text?: string }).text ?? "",
+        }));
+      /** A child's own first-vsetting RawText value, truncated, or null. */
+      const childText = (childIid: string): string | null => {
+        const child = getNode(model, childIid) as ModelNode & { vsettings?: Ref[] };
+        const cvs = deref<ModelNode & { text?: Ref | null }>(
+          model,
+          child.vsettings?.[0] ?? null
+        );
+        const raw = deref<ModelNode & { text?: string }>(model, cvs?.text ?? null);
+        return typeof raw?.text === "string" ? truncate(raw.text) : null;
+      };
       return {
         revision,
         iid,
@@ -434,9 +477,21 @@ export const modelTools: ToolDef[] = [
         rsIid: vs?.rs && isRef(vs.rs) ? vs.rs.__ref : null,
         styles: rs?.values ?? {},
         text: rawText?.text ?? null,
-        children: (node.children ?? [])
-          .filter(isRef)
-          .map((r) => r.__ref),
+        textIid: vs?.text && isRef(vs.text) ? vs.text.__ref : null,
+        texts,
+        children: (node.children ?? []).filter(isRef).map((r) => {
+          const child = getNode(model, r.__ref) as ModelNode & {
+            tag?: string;
+            type?: string;
+          };
+          return {
+            iid: r.__ref,
+            __type: child.__type,
+            tag: child.tag ?? null,
+            type: child.type ?? null,
+            text: childText(r.__ref),
+          };
+        }),
       };
     },
   }),

@@ -57,3 +57,21 @@ export const TPL_TAG_TYPES = [
   "other",
 ] as const;
 export type TplTagType = (typeof TPL_TAG_TYPES)[number];
+
+/** HTML void elements — can never have children (add_element refuses them as parents). */
+export const VOID_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
