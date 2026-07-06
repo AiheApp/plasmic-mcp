@@ -75,7 +75,19 @@ export class StudioDriver {
           );
         }
         try {
-          this.browser = await chromium.launch({ headless: true });
+          // Studio embeds the project's registered app-host (often
+          // http://localhost:3000/plasmic-host during component dev); Chrome's
+          // Local Network Access checks block that HTTPS-page-to-localhost
+          // fetch by default, which hangs the app-host handshake and Studio
+          // never finishes initializing window.dbg.studioCtx. Aita's own
+          // studio-canvas-check.ts / placement.ts disable the same checks.
+          this.browser = await chromium.launch({
+            headless: true,
+            args: [
+              "--allow-running-insecure-content",
+              "--disable-features=LocalNetworkAccessChecks,BlockInsecurePrivateNetworkRequests",
+            ],
+          });
         } catch (e) {
           throw new CanvasError(
             "BROWSER_UNAVAILABLE",
@@ -131,7 +143,9 @@ export class StudioDriver {
     projectId: string,
     opts: { waitMs?: number; attempts?: number } = {}
   ): Promise<StudioSession> {
-    const waitMs = opts.waitMs ?? 15_000;
+    // Cold self-hosted Studio loads (dev-mode webpack compile + app-host
+    // handshake) routinely take 15-20s; 15s was tight enough to flake.
+    const waitMs = opts.waitMs ?? 20_000;
     const attempts = opts.attempts ?? 3;
     let lastProbes: FrameProbe[] = [];
     let lastError = "";
@@ -162,6 +176,12 @@ export class StudioDriver {
       await context.close().catch(() => {});
       if (attempt < attempts) await sleep(1000 * 2 ** (attempt - 1));
     }
+
+    // All attempts used a fresh context/page but shared one browser process;
+    // a wedged browser (GPU/renderer hang) fails every fresh page identically
+    // and never trips isConnected(), so it would otherwise persist across
+    // every future call. Recycle it so the next attempt launches clean.
+    await this.close();
 
     throw new CanvasError(
       "CANVAS_NOT_READY",
