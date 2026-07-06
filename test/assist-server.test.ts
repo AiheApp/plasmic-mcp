@@ -1,11 +1,12 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { siteWithPage } from "./fixtures/site.js";
+import { siteWithPage, type SiteWithPage } from "./fixtures/site.js";
 import { createAssistHandler } from "../src/assist/server.js";
 import { PLAN_REPORT_TOOL } from "../src/assist/plan.js";
 import type { MessagesCreate } from "../src/assist/loop.js";
 import type { PlasmicClient } from "../src/client.js";
+import type { ModelNode, Ref } from "../src/model/index.js";
 
 const BEARER = "test-bearer";
 
@@ -14,8 +15,8 @@ const BEARER = "test-bearer";
  * bundle so re-reads (the apply verification tail) see the applied change.
  * bumpRevision() simulates a concurrent Studio save between plan and apply.
  */
-function fakePlasmicClient() {
-  const { model } = siteWithPage("Home", "/", "Hello");
+function fakePlasmicClient(fixture: SiteWithPage = siteWithPage("Home", "/", "Hello")) {
+  const { model } = fixture;
   let data = JSON.stringify(model);
   const state = { revision: 3, saves: 0 };
   const fake = {
@@ -82,8 +83,9 @@ let server: Server | undefined;
 async function startServer(opts: {
   createMessage: MessagesCreate;
   planTtlMs?: number;
+  fixture?: SiteWithPage;
 }): Promise<{ base: string; state: { revision: number; saves: number } }> {
-  const { client, state } = fakePlasmicClient();
+  const { client, state } = fakePlasmicClient(opts.fixture);
   const { handler } = createAssistHandler({
     client,
     bearer: BEARER,
@@ -152,6 +154,52 @@ describe("assist server /design-assist/plan + /apply", () => {
     const replay = (await replayRes.json()) as Record<string, unknown>;
     expect(replay.revisions).toEqual({ from: 3, to: 4 });
     expect(state.saves).toBe(1); // still exactly one save
+  });
+
+  it("plan → apply of an add/style/delete batch: one save, honest diff, clean integrity", async () => {
+    const fixture = siteWithPage("Home", "/", "Hello");
+    const textTplIid = (fixture.model.map[fixture.rootTplIid] as ModelNode & {
+      children: Ref[];
+    }).children[0].__ref;
+    const crudOps = [
+      {
+        op: "add_element",
+        id: "cta",
+        parentIid: fixture.rootTplIid,
+        tag: "button",
+        type: "text",
+        text: "Go",
+      },
+      { op: "set_styles", rsIid: "$cta.rs", styles: { display: "flex" } },
+      { op: "delete_element", iid: textTplIid },
+    ];
+    const { base, state } = await startServer({
+      createMessage: scriptedPlanRun(crudOps),
+      fixture,
+    });
+
+    // ---- plan ----
+    const planRes = await post(base, "/design-assist/plan", {
+      projectId: "p1",
+      request: "replace the hero text with a Go button",
+    });
+    expect(planRes.status).toBe(200);
+    const plan = (await planRes.json()) as Record<string, unknown>;
+    expect(plan.status).toBe("ready");
+    expect(state.saves).toBe(0); // planning wrote NOTHING
+
+    // ---- apply ----
+    const applyRes = await post(base, "/design-assist/apply", { planId: plan.planId });
+    expect(applyRes.status).toBe(200);
+    const report = (await applyRes.json()) as Record<string, unknown>;
+    expect(report.status).toBe("done");
+    expect(report.revisions).toEqual({ from: 3, to: 4 });
+    expect(state.saves).toBe(1);
+    const diff = report.diff as Array<Record<string, unknown>>;
+    const mod = diff.find((d) => d.change === "modified");
+    expect(mod?.textsAdded).toContain("Go");
+    expect(mod?.textsRemoved).toContain("Hello");
+    expect(report.integrityIssues).toEqual([]);
   });
 
   it("apply rejects with 409 REVISION_CONFLICT when the project advanced after planning", async () => {

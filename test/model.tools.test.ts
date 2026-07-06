@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { PlasmicClient } from "../src/client.js";
+import { PlasmicClient, PlasmicError } from "../src/client.js";
 import { modelTools } from "../src/tools/model.js";
 import { writeTools } from "../src/tools/write.js";
 import {
   serializeModel,
   findNodesByType,
   collectDescendants,
+  executeOps,
   type ModelNode,
   type PlasmicModel,
   type Ref,
@@ -136,6 +137,18 @@ describe("model tools (mocked client)", () => {
       iid: textTplIid,
     });
     expect(textTplIid in captured.savedModel!.map).toBe(false);
+  });
+
+  it("plasmic_delete_element refuses a page root", async () => {
+    const { model, rootTplIid } = siteWithPage("Home", "/", "Hello");
+    const { client, captured } = makeClient(model, 7);
+    await expect(
+      tool("plasmic_delete_element").handler(client, {
+        projectId: "p1",
+        iid: rootTplIid,
+      })
+    ).rejects.toThrow(PlasmicError);
+    expect(captured.body).toBeUndefined(); // nothing saved
   });
 
   it("plasmic_update_page_text replaces RawText content", async () => {
@@ -286,18 +299,68 @@ describe("model tools (mocked client)", () => {
     expect(res.updatedAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
-  it("plasmic_get_element reads styles/text/children by iid", async () => {
+  it("plasmic_get_element returns textIid, subtree texts, and child summaries", async () => {
     const { model, rootTplIid } = siteWithPage("Home", "/", "Hello");
     const { client } = makeClient(model, 1);
     const textTplIid = (model.map[rootTplIid] as ModelNode & { children: Ref[] })
       .children[0].__ref;
-    const res = (await tool("plasmic_get_element").handler(client, {
+    const rawTextIid = findNodesByType(model, "RawText")[0];
+
+    const root = (await tool("plasmic_get_element").handler(client, {
+      projectId: "p1",
+      iid: rootTplIid,
+    })) as {
+      textIid: string | null;
+      texts: { iid: string; text: string }[];
+      children: {
+        iid: string;
+        __type: string;
+        tag: string | null;
+        type: string | null;
+        text: string | null;
+      }[];
+    };
+    // the root has no own text, but the whole subtree's RawTexts are harvested
+    expect(root.textIid).toBeNull();
+    expect(root.texts).toEqual([{ iid: rawTextIid, text: "Hello" }]);
+    expect(root.children[0]).toMatchObject({
+      iid: textTplIid,
+      tag: "div",
+      type: "text",
+      text: "Hello",
+    });
+
+    const el = (await tool("plasmic_get_element").handler(client, {
       projectId: "p1",
       iid: textTplIid,
-    })) as { text: string | null; __type: string; type: string | null };
-    expect(res.__type).toBe("TplTag");
-    expect(res.type).toBe("text");
-    expect(res.text).toBe("Hello");
+    })) as { __type: string; type: string | null; text: string | null; textIid: string | null };
+    expect(el.__type).toBe("TplTag");
+    expect(el.type).toBe("text");
+    expect(el.text).toBe("Hello");
+    expect(el.textIid).toBe(rawTextIid);
+
+    // round trip: texts[].iid is a valid set_text textIid — add a second text
+    // element first so "only that RawText changed" is meaningful
+    executeOps(
+      model,
+      [
+        {
+          op: "add_element",
+          parentIid: rootTplIid,
+          tag: "div",
+          type: "text",
+          text: "Second",
+        },
+        { op: "set_text", path: "/", textIid: root.texts[0].iid, text: "Solo" },
+      ],
+      { tokens: [] }
+    );
+    const rawTexts = findNodesByType(model, "RawText").map(
+      (iid) => (model.map[iid] as { text: string }).text
+    );
+    expect(rawTexts.filter((t) => t === "Solo")).toHaveLength(1);
+    expect(rawTexts.filter((t) => t === "Second")).toHaveLength(1);
+    expect(rawTexts).not.toContain("Hello");
   });
 
   it("plasmic_upsert_component (create) registers a code component", async () => {

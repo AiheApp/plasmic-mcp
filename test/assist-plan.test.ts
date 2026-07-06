@@ -4,10 +4,13 @@ import { planPhaseTools, assistTools, MUTATING_TOOLS } from "../src/assist/tools
 import { planAssist, PLAN_REPORT_TOOL } from "../src/assist/plan.js";
 import type { MessagesCreate } from "../src/assist/loop.js";
 import type { PlasmicClient } from "../src/client.js";
+import type { ModelNode, PlasmicModel, Ref } from "../src/model/index.js";
 
-function fakePlasmicClient(): PlasmicClient {
-  const { model } = siteWithPage("Home", "/", "Hello");
-  let data = JSON.stringify(model);
+function fakePlasmicClient(
+  fixtureModel: PlasmicModel = siteWithPage("Home", "/", "Hello").model,
+  state = { saves: 0 }
+): PlasmicClient {
+  let data = JSON.stringify(fixtureModel);
   let revision = 3;
   const fake = {
     hostUrl: "http://fake",
@@ -23,6 +26,7 @@ function fakePlasmicClient(): PlasmicClient {
     post: async (path: string, body?: unknown) => {
       if (path.includes("/revisions/")) {
         revision += 1;
+        state.saves += 1;
         const posted = (body as { data?: string } | undefined)?.data;
         if (typeof posted === "string") data = posted;
         return {};
@@ -46,6 +50,21 @@ describe("planPhaseTools", () => {
       .filter((t) => !MUTATING_TOOLS.has(t.name))
       .map((t) => t.name);
     expect(planPhaseTools.map((t) => t.name)).toEqual(expected);
+  });
+
+  it("pins the exact plan-phase tool allowlist (nothing that can save a revision)", () => {
+    // Intentionally brittle — any tool added to the assist surface must be
+    // consciously re-allowlisted here.
+    expect(planPhaseTools.map((t) => t.name).sort()).toEqual(
+      [
+        "plasmic_get_element",
+        "plasmic_get_page_model",
+        "plasmic_get_project_meta",
+        "plasmic_list_pages",
+        "plasmic_list_tokens",
+        "plasmic_plan_mutations",
+      ].sort()
+    );
   });
 });
 
@@ -121,6 +140,65 @@ describe("planAssist (offline)", () => {
     expect(outcome.plan!.preview).toContain("revision 3");
     expect(outcome.plan!.before.length).toBeGreaterThan(0);
     expect(outcome.summary).toContain("hero text");
+  });
+
+  it("plans an element CRUD batch (add_element + set_styles + delete_element)", async () => {
+    const fixture = siteWithPage("Home", "/", "Hello");
+    const textTplIid = (fixture.model.map[fixture.rootTplIid] as ModelNode & {
+      children: Ref[];
+    }).children[0].__ref;
+    const state = { saves: 0 };
+    const client = fakePlasmicClient(fixture.model, state);
+    const crudOps = [
+      {
+        op: "add_element",
+        id: "cta",
+        parentIid: fixture.rootTplIid,
+        tag: "button",
+        type: "text",
+        text: "Go",
+      },
+      { op: "set_styles", rsIid: "$cta.rs", styles: { display: "flex" } },
+      { op: "delete_element", iid: textTplIid },
+    ];
+    let call = 0;
+    const createMessage: MessagesCreate = async () => {
+      call += 1;
+      if (call === 1) {
+        return {
+          content: [
+            {
+              type: "tool_use",
+              id: "t1",
+              name: "plasmic_plan_mutations",
+              input: { projectId: "p1", ops: crudOps },
+            },
+          ],
+          stop_reason: "tool_use",
+        } as never;
+      }
+      return {
+        content: [
+          {
+            type: "tool_use",
+            id: "t2",
+            name: PLAN_REPORT_TOOL.name,
+            input: { status: "ready", summary: "Will swap the hero text for a CTA." },
+          },
+        ],
+        stop_reason: "tool_use",
+      } as never;
+    };
+
+    const outcome = await planAssist(
+      client,
+      { projectId: "p1", request: "replace the hero text with a Go button" },
+      { createMessage }
+    );
+    expect(outcome.status).toBe("ready");
+    expect(outcome.plan!.ops).toEqual(crudOps);
+    expect(outcome.plan!.preview).toContain("3 ops");
+    expect(state.saves).toBe(0); // planning wrote NOTHING
   });
 
   it("keeps the LAST valid plan when the model re-plans", async () => {

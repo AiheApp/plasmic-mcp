@@ -42,7 +42,8 @@ element's RuleSet iid and the token's uuid or exact name from below).
 2. **Read the current state.** Call `plasmic_get_page_model` with the target
    page's `pageIid` to get its subtree (prefer scoping to a page; only fetch the
    full graph when you genuinely need cross-page structure). Use
-   `plasmic_get_element` for one element's details (`rsIid`, styles, text).
+   `plasmic_get_element` for one element's details (`rsIid`, styles, text,
+   `textIid`, subtree `texts`, and child summaries).
    Note the iids of the nodes you will touch. The tokens are already listed
    above — never invent token names.
 3. **Compose ONE ops array** covering the whole request (see Ops reference).
@@ -74,12 +75,17 @@ element's RuleSet iid and the token's uuid or exact name from below).
   `tag: "section", type: "other"`; text content REQUIRES `type: "text"` + the
   `text` field; buttons/CTAs are `tag: "button", type: "text"` (or
   `tag: "a", type: "text"` for link CTAs). Outputs: `$id` (element iid),
-  `$id.rs` (its RuleSet — style target).
+  `$id.rs` (its RuleSet — style target). The element is appended as the LAST
+  child of `parentIid` — there is no positional insert or reorder; sibling
+  order = op order. Void parents (`img` etc.) are refused.
 - `set_text` `{pageIid|path, textIid?, text}` — replace RawText content.
   Without `textIid` it replaces ALL RawText on the page — pass `textIid`
   (from `plasmic_get_page_model`) when the page has more than one text node.
+  The `textIid` for a specific element comes from `plasmic_get_element`
+  (`texts[].iid` / `textIid`).
 - `delete_element` `{iid}` — remove one element + its descendants. Only Tpl
-  elements; never pages or components.
+  elements; never pages or components. Deleting a page's ROOT element is
+  refused — restyle it or delete its children instead.
 - `apply_token` `{rsIid, prop, token}` — set a CSS property to a design token.
   `token` is a token uuid or exact name from the list above. `rsIid` comes
   from `$id.rs`, `$page.rootRs`, or `plasmic_get_element`.

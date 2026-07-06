@@ -51,6 +51,13 @@ describe("checkIntegrity", () => {
     model.root = "nope";
     expect(checkIntegrity(model).some((i) => i.includes("root nope"))).toBe(true);
   });
+
+  it("flags a Component whose tplTree is null", () => {
+    const { model, pageIid } = siteWithPage();
+    (model.map[pageIid] as ModelNode & { tplTree: Ref | null }).tplTree = null;
+    const issues = checkIntegrity(model);
+    expect(issues.some((i) => i.includes("tplTree"))).toBe(true);
+  });
 });
 
 describe("summarizePage / diffPages", () => {
@@ -100,6 +107,8 @@ describe("assistTools", () => {
       "plasmic_apply_token",
       "plasmic_upsert_component",
       "plasmic_duplicate_page",
+      // write-capable admin/repair tool — not a design op
+      "plasmic_repair_page_arenas",
     ]) {
       expect(names.has(banned), `${banned} must be excluded`).toBe(false);
     }
