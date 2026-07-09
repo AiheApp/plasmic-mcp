@@ -35,7 +35,35 @@ export async function fetchRev(
   return { revision: body.rev.revision, model: parseModel(body.rev.data) };
 }
 
-export function saveRev(
+// The server 412s (SchemaMismatchError) unless the save body's modelSchemaHash
+// matches the RUNNING server's — and that hash changes on model-schema-touching
+// Studio upgrades (classes-metas.ts is regenerated at image build). Resolution
+// order: PLASMIC_MODEL_SCHEMA_HASH env override → the server's own value from
+// GET /api/v1/app-config (self-hosted fork exposes it; cached per client) →
+// the legacy hardcoded constant (pre-patch servers).
+const schemaHashCache = new WeakMap<PlasmicClient, number>();
+
+export async function resolveModelSchemaHash(
+  client: PlasmicClient
+): Promise<number | undefined> {
+  const envHash = process.env.PLASMIC_MODEL_SCHEMA_HASH;
+  if (envHash && Number.isFinite(Number(envHash))) return Number(envHash);
+  if (schemaHashCache.has(client)) return schemaHashCache.get(client);
+  try {
+    const cfg = (await client.get(`/api/v1/app-config`)) as {
+      modelSchemaHash?: unknown;
+    };
+    if (typeof cfg?.modelSchemaHash === "number") {
+      schemaHashCache.set(client, cfg.modelSchemaHash);
+      return cfg.modelSchemaHash;
+    }
+  } catch {
+    // fall through to the legacy constant
+  }
+  return undefined;
+}
+
+export async function saveRev(
   client: PlasmicClient,
   projectId: string,
   model: PlasmicModel,
@@ -43,9 +71,10 @@ export function saveRev(
   modifiedComponentIids: string[]
 ): Promise<unknown> {
   const newRev = currentRevision + 1;
+  const hash = await resolveModelSchemaHash(client);
   return client.post(
     `/api/v1/projects/${enc(projectId)}/revisions/${newRev}`,
-    buildRevisionBody(model, currentRevision, modifiedComponentIids)
+    buildRevisionBody(model, currentRevision, modifiedComponentIids, hash)
   );
 }
 

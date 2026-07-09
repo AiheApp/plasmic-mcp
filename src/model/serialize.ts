@@ -49,10 +49,11 @@ export interface RevisionBody {
 export function buildRevisionBody(
   model: PlasmicModel,
   currentRevision: number,
-  modifiedComponentIids: string[]
+  modifiedComponentIids: string[],
+  modelSchemaHash: number = MODEL_SCHEMA_HASH
 ): RevisionBody {
   return {
-    modelSchemaHash: MODEL_SCHEMA_HASH,
+    modelSchemaHash,
     data: serializeModel(model),
     modelVersion: MODEL_VERSION,
     hostlessDataVersion: HOSTLESS_DATA_VERSION,
